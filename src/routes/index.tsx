@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Zap, Check, Star, Bot, BarChart3, Users, Shield, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
+import { handleLogin, handleSignup } from "@/lib/deriv";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -85,9 +86,8 @@ function LandingPage() {
           <span className="text-foreground/90">tool</span>
         </div>
         <a
-          href="https://oauth.deriv.com/oauth2/authorize?app_id=36300"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="#login"
+          onClick={handleLogin}
           className="inline-flex items-center gap-2 rounded-full bg-background border border-border px-5 py-2.5 text-sm font-semibold hover:bg-secondary hover:scale-105 transition-all duration-300 animate-fade-up"
         >
           Login Now <ArrowRight className="h-4 w-4" />
@@ -118,17 +118,15 @@ function LandingPage() {
             Start Trading Now <ArrowRight className="h-4 w-4" />
           </Link>
           <a
-            href="https://oauth.deriv.com/oauth2/authorize?app_id=36300"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#login"
+            onClick={handleLogin}
             className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-8 py-3 text-sm font-semibold text-background hover:opacity-95 hover:scale-105 transition-all duration-300"
           >
             Old Account Login
           </a>
           <a
-            href="https://track.deriv.com/_SBDSiGetH571hit6RV3zsGNd7ZgqdRLk/1/"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#signup"
+            onClick={handleSignup}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-3 text-sm font-semibold hover:opacity-95 hover:scale-105 transition-all duration-300"
           >
             Sign Up
@@ -289,9 +287,8 @@ function LandingPage() {
                 Start Trading Now <ArrowRight className="h-4 w-4" />
               </Link>
               <a
-                href="https://track.deriv.com/_SBDSiGetH571hit6RV3zsGNd7ZgqdRLk/1/"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#signup"
+                onClick={handleSignup}
                 className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-8 py-4 text-base font-semibold text-background hover:scale-105 transition-all duration-300"
               >
                 Create Free Account
