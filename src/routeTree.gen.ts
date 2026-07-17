@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppTradingViewRouteImport } from './routes/app.trading-view'
 import { Route as AppTradingBotsRouteImport } from './routes/app.trading-bots'
 import { Route as AppRiskCalculatorRouteImport } from './routes/app.risk-calculator'
 import { Route as AppReportsRouteImport } from './routes/app.reports'
@@ -36,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTradingViewRoute = AppTradingViewRouteImport.update({
+  id: '/trading-view',
+  path: '/trading-view',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTradingBotsRoute = AppTradingBotsRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/app/reports': typeof AppReportsRoute
   '/app/risk-calculator': typeof AppRiskCalculatorRoute
   '/app/trading-bots': typeof AppTradingBotsRoute
+  '/app/trading-view': typeof AppTradingViewRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/app/reports': typeof AppReportsRoute
   '/app/risk-calculator': typeof AppRiskCalculatorRoute
   '/app/trading-bots': typeof AppTradingBotsRoute
+  '/app/trading-view': typeof AppTradingViewRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/app/reports': typeof AppReportsRoute
   '/app/risk-calculator': typeof AppRiskCalculatorRoute
   '/app/trading-bots': typeof AppTradingBotsRoute
+  '/app/trading-view': typeof AppTradingViewRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/app/reports'
     | '/app/risk-calculator'
     | '/app/trading-bots'
+    | '/app/trading-view'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/app/reports'
     | '/app/risk-calculator'
     | '/app/trading-bots'
+    | '/app/trading-view'
     | '/app'
   id:
     | '__root__'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/app/reports'
     | '/app/risk-calculator'
     | '/app/trading-bots'
+    | '/app/trading-view'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -207,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/trading-view': {
+      id: '/app/trading-view'
+      path: '/trading-view'
+      fullPath: '/app/trading-view'
+      preLoaderRoute: typeof AppTradingViewRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/trading-bots': {
@@ -293,6 +312,7 @@ interface AppRouteChildren {
   AppReportsRoute: typeof AppReportsRoute
   AppRiskCalculatorRoute: typeof AppRiskCalculatorRoute
   AppTradingBotsRoute: typeof AppTradingBotsRoute
+  AppTradingViewRoute: typeof AppTradingViewRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -307,6 +327,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReportsRoute: AppReportsRoute,
   AppRiskCalculatorRoute: AppRiskCalculatorRoute,
   AppTradingBotsRoute: AppTradingBotsRoute,
+  AppTradingViewRoute: AppTradingViewRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
@@ -319,13 +340,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
