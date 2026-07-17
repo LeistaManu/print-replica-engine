@@ -1,6 +1,8 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Blocks, LineChart, Bot, Layers, Activity, FileBarChart, Calculator, Copy, TrendingUp, Phone, LogIn, UserPlus } from "lucide-react";
+import { LayoutDashboard, Blocks, LineChart, Bot, Layers, Activity, FileBarChart, Calculator, Copy, TrendingUp, Phone, LogIn, UserPlus, FileText, Wallet, X, ArrowDownCircle, ArrowUpCircle, CandlestickChart } from "lucide-react";
+import { useState } from "react";
 import { DollarRain } from "@/components/DollarRain";
+import { handleLogin, handleSignup, handleDeposit, handleWithdraw, SUPPORT_PHONE, SUPPORT_PHONE_DISPLAY } from "@/lib/deriv";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -23,20 +25,68 @@ const nav = [
   { to: "/app/risk-calculator", label: "Risk Calculator", icon: Calculator },
   { to: "/app/copy-trading", label: "Copy Trading", icon: Copy },
   { to: "/app/dtrader", label: "DTrader", icon: TrendingUp },
+  { to: "/app/trading-view", label: "TradingView", icon: CandlestickChart },
 ];
 
 function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [showMarquee, setShowMarquee] = useState(true);
+  const [showCashier, setShowCashier] = useState(false);
+  const [currency, setCurrency] = useState<"KES" | "USD">("KES");
+  const balance = currency === "KES" ? "1,293,024.34 KES" : "9,987.42 USD";
+  const isDeposit = currency === "KES"; // toggle deposit/withdraw look like the ref
+
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white">
       <DollarRain />
-      {/* Marquee banner */}
-      <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-700 text-white text-xs md:text-sm font-semibold overflow-hidden whitespace-nowrap py-2">
-        <div className="inline-block animate-[scroll_30s_linear_infinite] px-4">
-          🔥 TRADE SMARTER WITH DIGITTOOL • AUTOMATED BOTS • REAL-TIME ANALYSIS • COPY TOP TRADERS • 24/7 SUPPORT • VIRTUAL ACCOUNT AVAILABLE • JOIN 50,000+ TRADERS AND MORE •&nbsp;
-          🔥 TRADE SMARTER WITH DIGITTOOL • AUTOMATED BOTS • REAL-TIME ANALYSIS • COPY TOP TRADERS • 24/7 SUPPORT • VIRTUAL ACCOUNT AVAILABLE • JOIN 50,000+ TRADERS AND MORE •&nbsp;
+
+      {/* Utility bar (Reports / Cashier / balance / deposit) */}
+      <div className="bg-[#0f1424] border-b border-white/5">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between px-4 py-2 text-sm">
+          <div className="flex items-center gap-4">
+            <Link to="/app/reports" className="inline-flex items-center gap-1.5 text-white/80 hover:text-white">
+              <FileText className="w-4 h-4" /> Reports
+            </Link>
+            <button onClick={() => setShowCashier(true)} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white">
+              <Wallet className="w-4 h-4" /> Cashier
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={isDeposit ? handleDeposit : handleWithdraw}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-md ${
+                isDeposit ? "bg-purple-500 hover:bg-purple-400 text-white" : "bg-purple-300 hover:bg-purple-200 text-purple-900"
+              }`}
+            >
+              {isDeposit ? "Deposit" : "Withdraw"}
+            </button>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 grid place-items-center text-[10px] font-black text-slate-900">D</span>
+              <span className="font-bold tabular-nums">{balance}</span>
+              <button
+                onClick={() => setCurrency((c) => (c === "KES" ? "USD" : "KES"))}
+                className="text-white/50 hover:text-white text-xs"
+                title="Switch currency"
+              >
+                ▾
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Marquee banner */}
+      {showMarquee && (
+        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-red-700 text-white text-xs md:text-sm font-semibold overflow-hidden whitespace-nowrap py-2">
+          <div className="inline-block animate-[scroll_30s_linear_infinite] px-4">
+            🔥 WELCOME TO DIGITTOOL — YOUR HUB FOR TRADING KNOWLEDGE, DERIV INDICES, AND MORE • AUTOMATED BOTS • REAL-TIME ANALYSIS • COPY TOP TRADERS • 24/7 SUPPORT • VIRTUAL ACCOUNT AVAILABLE •&nbsp;
+            🔥 WELCOME TO DIGITTOOL — YOUR HUB FOR TRADING KNOWLEDGE, DERIV INDICES, AND MORE • AUTOMATED BOTS • REAL-TIME ANALYSIS • COPY TOP TRADERS • 24/7 SUPPORT • VIRTUAL ACCOUNT AVAILABLE •&nbsp;
+          </div>
+          <button onClick={() => setShowMarquee(false)} className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center rounded-full bg-black/30 hover:bg-black/50">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Top bar */}
       <header className="border-b border-white/10 bg-[#0f1424]/80 backdrop-blur">
@@ -51,21 +101,19 @@ function AppLayout() {
               <span className="text-white/40">/</span>
               <span className="font-semibold">USD</span>
             </div>
-            <a href="tel:+254700000000" className="w-9 h-9 grid place-items-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10">
+            <a href={`tel:${SUPPORT_PHONE}`} title={SUPPORT_PHONE_DISPLAY} className="w-9 h-9 grid place-items-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10">
               <Phone className="w-4 h-4 text-cyan-400" />
             </a>
             <a
-              href="https://oauth.deriv.com/oauth2/authorize?app_id=36300"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#login"
+              onClick={handleLogin}
               className="px-4 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-sm inline-flex items-center gap-1.5"
             >
               <LogIn className="w-4 h-4" /> Log in
             </a>
             <a
-              href="https://track.deriv.com/_SBDSiGetH571hit6RV3zsGNd7ZgqdRLk/1/"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#signup"
+              onClick={handleSignup}
               className="px-4 py-1.5 rounded-full bg-pink-100 text-pink-900 hover:bg-white text-sm font-semibold inline-flex items-center gap-1.5"
             >
               <UserPlus className="w-4 h-4" /> Sign up
@@ -85,7 +133,7 @@ function AppLayout() {
                     to={n.to}
                     className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                       active
-                        ? "border-cyan-400 text-white"
+                        ? "border-cyan-400 text-white bg-white/5"
                         : "border-transparent text-white/70 hover:text-white hover:border-white/20"
                     }`}
                   >
@@ -107,7 +155,37 @@ function AppLayout() {
 
       <footer className="border-t border-white/10 mt-10 py-6 text-center text-xs text-white/40">
         © {new Date().getFullYear()} Digittool. Trading involves risk. Past performance is not indicative of future results.
+        <div className="mt-1">Support: <a href={`tel:${SUPPORT_PHONE}`} className="text-cyan-400 hover:underline">{SUPPORT_PHONE_DISPLAY}</a></div>
       </footer>
+
+      {/* Cashier modal */}
+      {showCashier && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm grid place-items-center p-4" onClick={() => setShowCashier(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-[#0f1424] border border-white/10 p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold inline-flex items-center gap-2"><Wallet className="w-5 h-5" /> Cashier</h2>
+              <button onClick={() => setShowCashier(false)} className="w-8 h-8 grid place-items-center rounded-full bg-white/5 hover:bg-white/10">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="rounded-lg bg-white/5 p-4 text-center">
+              <div className="text-xs text-white/50">Available Balance</div>
+              <div className="text-2xl font-black tabular-nums mt-1">{balance}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={handleDeposit} className="py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold inline-flex items-center justify-center gap-2">
+                <ArrowDownCircle className="w-4 h-4" /> Deposit
+              </button>
+              <button onClick={handleWithdraw} className="py-3 rounded-lg bg-red-500 hover:bg-red-400 text-white font-bold inline-flex items-center justify-center gap-2">
+                <ArrowUpCircle className="w-4 h-4" /> Withdraw
+              </button>
+            </div>
+            <p className="text-[11px] text-white/50 leading-relaxed">
+              Deposits and withdrawals are processed securely through Deriv Cashier. You'll be redirected to complete the transaction.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
