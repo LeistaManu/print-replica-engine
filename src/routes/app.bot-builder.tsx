@@ -98,6 +98,28 @@ function BotBuilder() {
     return () => window.clearInterval(id);
   }, [botState, stake, purchase, currency]);
 
+  // Load a bot dropped in from the Trading Bots store (localStorage handoff).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("digittool.pendingBot");
+      if (!raw) return;
+      const c = JSON.parse(raw) as { name?: string; market?: string; stake?: number; duration?: string; strategy?: string; category?: string };
+      if (c.market) setMarket(c.market);
+      if (typeof c.stake === "number") setStake(c.stake);
+      if (c.category) {
+        const cat = c.category;
+        const map: Record<string, string> = {
+          "Rise/Fall": "Rise/Fall", "Even/Odd": "Even/Odd", "Over/Under": "Over/Under",
+          "Matches/Differs": "Matches/Differs", "Higher/Lower": "Higher/Lower", "Touch/No Touch": "Touch/No Touch",
+        };
+        if (map[cat]) setTradeType(map[cat]);
+      }
+      setJournal((p) => [`[${new Date().toLocaleTimeString()}] Loaded bot "${c.name ?? "Untitled"}" from Store (${c.strategy ?? "custom"} on ${c.market ?? "?"})`, ...p]);
+      localStorage.removeItem("digittool.pendingBot");
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const toggleCat = (c: string) => setOpenCat((p) => ({ ...p, [c]: !p[c] }));
 
   const filteredCats = useMemo(() => {
