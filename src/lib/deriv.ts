@@ -1,6 +1,7 @@
 // Deriv OAuth + affiliate + cashier helpers.
-// After clicking login / signup we open Deriv in a new tab and immediately
-// return the user to our workspace so the session on this site is preserved.
+// Login / Signup open Deriv in a NEW tab (avoids popup blockers) and
+// immediately navigate THIS tab to the workspace so the user is "returned"
+// to our site right away.
 
 export const DERIV_APP_ID = "36300";
 export const DERIV_OAUTH_URL = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}`;
@@ -10,53 +11,52 @@ export const DERIV_WITHDRAW_URL = "https://app.deriv.com/cashier/withdrawal";
 export const SUPPORT_PHONE = "+254700210017";
 export const SUPPORT_PHONE_DISPLAY = "0700210017";
 
-function openExternalAndReturn(url: string, returnTo: string) {
+const RETURN_TO = "/app/bot-builder";
+
+function openInNewTab(url: string) {
   if (typeof window === "undefined") return;
-  // Open Deriv login/signup in a popup so THIS tab (our site) is preserved.
-  let popup: Window | null = null;
   try {
-    popup = window.open(
-      url,
-      "deriv_auth",
-      "noopener,noreferrer,width=520,height=720,left=200,top=100",
-    );
+    const w = window.open(url, "_blank", "noopener,noreferrer");
+    if (w) return;
   } catch {}
-  // Immediately route this tab to the workspace so the user is already "back".
-  try { window.location.href = returnTo; } catch {}
-  if (!popup) {
-    // Popup blocked — fall back to a new tab.
-    try { window.open(url, "_blank", "noopener,noreferrer"); } catch {}
-    return;
+  // Last-resort fallback: temp anchor click (works when window.open is blocked).
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch {}
+}
+
+function goToWorkspace() {
+  if (typeof window === "undefined") return;
+  // Only navigate if we're not already there — avoids a reload loop.
+  if (!window.location.pathname.startsWith("/app")) {
+    window.location.href = RETURN_TO;
   }
-  const timer = setInterval(() => {
-    try {
-      if (popup!.closed) {
-        clearInterval(timer);
-        try { window.focus(); } catch {}
-        window.location.href = returnTo;
-      }
-    } catch {
-      clearInterval(timer);
-    }
-  }, 600);
 }
 
 export function handleLogin(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  openExternalAndReturn(DERIV_OAUTH_URL, "/app/bot-builder");
+  openInNewTab(DERIV_OAUTH_URL);
+  goToWorkspace();
 }
 
 export function handleSignup(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  openExternalAndReturn(DERIV_SIGNUP_URL, "/app/bot-builder");
+  openInNewTab(DERIV_SIGNUP_URL);
+  goToWorkspace();
 }
 
 export function handleDeposit(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  window.open(DERIV_DEPOSIT_URL, "_blank", "noopener,noreferrer");
+  openInNewTab(DERIV_DEPOSIT_URL);
 }
 
 export function handleWithdraw(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  window.open(DERIV_WITHDRAW_URL, "_blank", "noopener,noreferrer");
+  openInNewTab(DERIV_WITHDRAW_URL);
 }
