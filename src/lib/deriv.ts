@@ -11,14 +11,34 @@ export const SUPPORT_PHONE = "+254700210017";
 export const SUPPORT_PHONE_DISPLAY = "0700210017";
 
 function openExternalAndReturn(url: string, returnTo: string) {
+  if (typeof window === "undefined") return;
+  // Open Deriv login/signup in a popup so THIS tab (our site) is preserved.
+  let popup: Window | null = null;
   try {
-    window.open(url, "_blank", "noopener,noreferrer");
+    popup = window.open(
+      url,
+      "deriv_auth",
+      "noopener,noreferrer,width=520,height=720,left=200,top=100",
+    );
   } catch {}
-  if (typeof window !== "undefined") {
-    setTimeout(() => {
-      window.location.href = returnTo;
-    }, 150);
+  // Immediately route this tab to the workspace so the user is already "back".
+  try { window.location.href = returnTo; } catch {}
+  if (!popup) {
+    // Popup blocked — fall back to a new tab.
+    try { window.open(url, "_blank", "noopener,noreferrer"); } catch {}
+    return;
   }
+  const timer = setInterval(() => {
+    try {
+      if (popup!.closed) {
+        clearInterval(timer);
+        try { window.focus(); } catch {}
+        window.location.href = returnTo;
+      }
+    } catch {
+      clearInterval(timer);
+    }
+  }, 600);
 }
 
 export function handleLogin(e?: { preventDefault?: () => void }) {
