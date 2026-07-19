@@ -188,6 +188,8 @@ function AnalysisTool() {
                       {d}
                     </div>
                     <div className="text-[11px] font-semibold text-white/80">{pct.toFixed(1)}%</div>
+                    <div className={`h-2 w-10 rounded-sm transition-opacity ${isCurrent ? "opacity-100 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" : "opacity-0"}`} />
+                    <div className={`text-red-500 text-lg leading-none transition-opacity ${isCurrent ? "opacity-100" : "opacity-0"}`}>▲</div>
                     <div className="h-4 text-[10px] text-center">
                       {isMax && <span className="text-emerald-400 font-semibold">most</span>}
                       {!isMax && isMin && <span className="text-red-400 font-semibold">least frequency</span>}
