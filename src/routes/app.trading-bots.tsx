@@ -38,6 +38,7 @@ function TradingBots() {
   const [running, setRunning] = useState<RunningBot[]>([]);
   const [selected, setSelected] = useState<CatalogBot | null>(null);
   const [subTab, setSubTab] = useState<SubTab>("Free Bots");
+  const [toast, setToast] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
