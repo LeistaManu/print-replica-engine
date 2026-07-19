@@ -4,7 +4,10 @@ import {
   Play, Pause, Square, Search, Download, Star, Zap, Bot as BotIcon,
   Sparkles, Filter, Trash2, ExternalLink, TrendingUp,
 } from "lucide-react";
-import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory } from "@/lib/bots-catalog";
+import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory, type BotGroup } from "@/lib/bots-catalog";
+
+type SubTab = BotGroup | "Calculator" | "Strategies";
+const SUBTABS: SubTab[] = ["Free Bots", "Scalper Bots", "SpeedBots", "Calculator", "Strategies"];
 
 export const Route = createFileRoute("/app/trading-bots")({
   head: () => ({ meta: [{ title: "Trading Bots — Digittool" }] }),
