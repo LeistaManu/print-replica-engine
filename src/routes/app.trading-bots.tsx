@@ -301,3 +301,82 @@ function TradingBots() {
     </div>
   );
 }
+
+/* -------- Calculator sub-tab -------- */
+function BotCalculator() {
+  const [stake, setStake] = useState(1);
+  const [payout, setPayout] = useState(95);
+  const [losses, setLosses] = useState(5);
+  const [factor, setFactor] = useState(2);
+
+  const rows = Array.from({ length: losses }, (_, i) => {
+    const s = stake * Math.pow(factor, i);
+    return { step: i + 1, stake: s, cum: Array.from({ length: i + 1 }, (_, k) => stake * Math.pow(factor, k)).reduce((a, b) => a + b, 0), payout: s * (payout / 100) };
+  });
+
+  return (
+    <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-5">
+      <h2 className="text-lg font-bold inline-flex items-center gap-2"><Zap className="w-5 h-5 text-yellow-400" /> Bot Calculator</h2>
+      <p className="text-sm text-white/60">Plan your stake progression, payout expectations and drawdown before deploying a bot.</p>
+      <div className="grid md:grid-cols-4 gap-3">
+        <label className="text-xs text-white/60">Base Stake (USD)
+          <input type="number" min={0.35} step={0.1} value={stake} onChange={(e) => setStake(Number(e.target.value))} className="mt-1 w-full bg-white text-slate-900 font-semibold rounded-lg px-3 py-2" />
+        </label>
+        <label className="text-xs text-white/60">Payout %
+          <input type="number" min={1} max={99} value={payout} onChange={(e) => setPayout(Number(e.target.value))} className="mt-1 w-full bg-white text-slate-900 font-semibold rounded-lg px-3 py-2" />
+        </label>
+        <label className="text-xs text-white/60">Consecutive Losses
+          <input type="number" min={1} max={15} value={losses} onChange={(e) => setLosses(Number(e.target.value))} className="mt-1 w-full bg-white text-slate-900 font-semibold rounded-lg px-3 py-2" />
+        </label>
+        <label className="text-xs text-white/60">Martingale Factor
+          <input type="number" min={1} step={0.1} value={factor} onChange={(e) => setFactor(Number(e.target.value))} className="mt-1 w-full bg-white text-slate-900 font-semibold rounded-lg px-3 py-2" />
+        </label>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-white/60 text-xs uppercase text-left">
+              <th className="py-2">Step</th><th>Stake</th><th>Cumulative Risk</th><th>Payout on Win</th><th>Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.step} className="border-t border-white/10">
+                <td className="py-2">{r.step}</td>
+                <td className="tabular-nums">${r.stake.toFixed(2)}</td>
+                <td className="tabular-nums text-red-400">${r.cum.toFixed(2)}</td>
+                <td className="tabular-nums text-emerald-400">${r.payout.toFixed(2)}</td>
+                <td className={`tabular-nums font-semibold ${r.payout - r.cum >= 0 ? "text-emerald-400" : "text-red-400"}`}>${(r.payout - r.cum).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* -------- Strategies sub-tab -------- */
+function StrategiesView() {
+  const strategies = [
+    { name: "Martingale", desc: "Double the stake after every loss. Recovers all losses on the next win. High risk during long losing streaks." },
+    { name: "D'Alembert", desc: "Increase stake by one unit after a loss, decrease by one after a win. Smoother than Martingale." },
+    { name: "Oscar's Grind", desc: "Aims to win one unit per cycle. Increases stake only after wins, resets after each cycle." },
+    { name: "1-3-2-6", desc: "Positive progression across 4 wins: 1, 3, 2, 6 units. Locks profits and limits exposure." },
+    { name: "Reverse Martingale", desc: "Double stake after each win. Rides winning streaks; resets on loss." },
+    { name: "Anti-Martingale", desc: "Compounds winning streaks with capped stake growth." },
+    { name: "Fibonacci", desc: "Follows the Fibonacci sequence after losses. Slower progression than Martingale." },
+    { name: "Fixed Stake", desc: "Same stake every trade. Best for consistent edge and low variance." },
+    { name: "LSS (Level Stake System)", desc: "Adjusts stake level based on session P&L, targeting steady equity growth." },
+  ];
+  return (
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {strategies.map((s) => (
+        <div key={s.name} className="p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="font-semibold mb-1 inline-flex items-center gap-2"><Star className="w-4 h-4 text-yellow-400" /> {s.name}</div>
+          <div className="text-xs text-white/70">{s.desc}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
