@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Play, Square, Save, Download, Upload, RotateCcw, RotateCw, ZoomIn, ZoomOut,
-  ChevronDown, ChevronRight, Search, Trash2, X, Plus,
+  ChevronDown, ChevronRight, Search, Trash2, X, Plus, CheckCircle2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/bot-builder")({
@@ -67,6 +67,7 @@ function BotBuilder() {
   const [tab, setTab] = useState<"Summary" | "Transactions" | "Journal">("Summary");
   const [trades, setTrades] = useState<Trade[]>([]);
   const [journal, setJournal] = useState<string[]>([]);
+  const [loadedBotNotice, setLoadedBotNotice] = useState<string | null>(null);
   const tradeId = useRef(0);
 
   const stats = useMemo(() => {
@@ -114,7 +115,9 @@ function BotBuilder() {
         };
         if (map[cat]) setTradeType(map[cat]);
       }
-      setJournal((p) => [`[${new Date().toLocaleTimeString()}] Loaded bot "${c.name ?? "Untitled"}" from Store (${c.strategy ?? "custom"} on ${c.market ?? "?"})`, ...p]);
+      const loadedName = c.name ?? "Untitled";
+      setLoadedBotNotice(`Successfully loaded bot: ${loadedName}`);
+      setJournal((p) => [`[${new Date().toLocaleTimeString()}] Successfully loaded bot "${loadedName}" from Store (${c.strategy ?? "custom"} on ${c.market ?? "?"})`, ...p]);
       localStorage.removeItem("digittool.pendingBot");
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,6 +184,17 @@ function BotBuilder() {
 
   return (
     <div className="grid grid-cols-12 gap-4">
+      {loadedBotNotice && (
+        <div className="col-span-12 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.18)] flex items-center justify-between gap-3 animate-page-in">
+          <div className="inline-flex items-center gap-2 text-sm font-bold">
+            <CheckCircle2 className="h-5 w-5 text-emerald-300" />
+            {loadedBotNotice}
+          </div>
+          <button onClick={() => setLoadedBotNotice(null)} className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white" aria-label="Dismiss loaded bot message">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {/* Left panel */}
       <aside className="col-span-12 lg:col-span-3 space-y-3">
         <button onClick={() => setQuickOpen(true)} className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-500 font-semibold">

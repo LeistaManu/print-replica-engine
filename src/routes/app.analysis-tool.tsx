@@ -174,7 +174,16 @@ function AnalysisTool() {
               <h2 className="font-semibold">Last {ticks} ticks digit distribution</h2>
               <div className="text-xs text-white/60">{ticks}/{ticks}</div>
             </div>
-            <div className="grid grid-cols-5 md:grid-cols-10 gap-4 pt-6">
+            <div className="relative pt-8 pb-7">
+              <div
+                className="pointer-events-none absolute bottom-0 z-20 w-12 -translate-x-1/2 transition-[left] duration-500 ease-out"
+                style={{ left: `calc(${current * 10 + 5}% - ${current === 0 ? "0px" : current === 9 ? "0px" : "0px"})` }}
+                aria-hidden="true"
+              >
+                <div className="mx-auto h-2 w-12 rounded-full bg-red-600 shadow-[0_0_14px_rgba(220,38,38,0.95)]" />
+                <div className="mx-auto h-0 w-0 border-l-[8px] border-r-[8px] border-b-[10px] border-l-transparent border-r-transparent border-b-red-600" />
+              </div>
+              <div className="grid grid-cols-10 gap-2 md:gap-4">
               {dist.map((pct, d) => {
                 const isCurrent = d === current;
                 const isMax = d === ranked.mostIdx;
@@ -188,8 +197,6 @@ function AnalysisTool() {
                       {d}
                     </div>
                     <div className="text-[11px] font-semibold text-white/80">{pct.toFixed(1)}%</div>
-                    <div className={`h-2 w-10 rounded-sm transition-opacity ${isCurrent ? "opacity-100 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" : "opacity-0"}`} />
-                    <div className={`text-red-500 text-lg leading-none transition-opacity ${isCurrent ? "opacity-100" : "opacity-0"}`}>▲</div>
                     <div className="h-4 text-[10px] text-center">
                       {isMax && <span className="text-emerald-400 font-semibold">most</span>}
                       {!isMax && isMin && <span className="text-red-400 font-semibold">least frequency</span>}
@@ -197,6 +204,7 @@ function AnalysisTool() {
                   </div>
                 );
               })}
+              </div>
             </div>
           </div>
 
