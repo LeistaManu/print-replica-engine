@@ -96,9 +96,15 @@ function BulkTrader() {
                 maskImage: "radial-gradient(circle, transparent 55%, black 56%)",
                 WebkitMaskImage: "radial-gradient(circle, transparent 55%, black 56%)",
               }} />
-              <div className="relative font-black text-lg">{d}</div>
+              <div className="relative text-center">
+                <div className="font-black text-lg leading-none">{d}</div>
+                <div className="text-[9px] font-bold leading-none mt-0.5">{pct.toFixed(2)}%</div>
+              </div>
             </div>
-            <div className="text-xs font-semibold mt-1 text-white/80">{pct.toFixed(2)}%</div>
+            {/* Cursor arrow — only shown under the current digit */}
+            <div className={`mt-1 h-3 transition-opacity ${d === currentDigit ? "opacity-100" : "opacity-0"}`}>
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-500" />
+            </div>
           </div>
         ))}
       </div>
