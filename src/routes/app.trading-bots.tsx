@@ -97,6 +97,12 @@ function TradingBots() {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-emerald-500 text-slate-900 font-bold shadow-2xl animate-page-in inline-flex items-center gap-2">
+          <span className="grid place-items-center w-6 h-6 rounded-full bg-white/30">✓</span>
+          {toast}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
