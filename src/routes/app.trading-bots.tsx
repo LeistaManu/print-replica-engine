@@ -52,7 +52,7 @@ function TradingBots() {
       (category === "All" || b.category === category) &&
       (q === "" || b.name.toLowerCase().includes(q) || b.market.toLowerCase().includes(q) || b.description.toLowerCase().includes(q)),
     );
-  }, [query, category]);
+  }, [query, category, subTab]);
 
   // Live simulation for running bots
   useEffect(() => {
