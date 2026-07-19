@@ -151,7 +151,7 @@ function AnalysisTool() {
             return (
               <div key={d} className="flex flex-col items-center gap-2">
                 <div className={`text-blue-400 text-xs transition-opacity ${isCurrent ? "opacity-100" : "opacity-0"}`}>▼</div>
-                <div className={`relative w-16 h-16 rounded-full grid place-items-center font-black text-xl transition-all duration-300 ${digitStyle(d)}`}>
+                <div className={`relative w-16 h-16 rounded-full grid place-items-center font-black text-xl transition-all duration-300 ${digitStyle()}`}>
                   {d}
                   <span className="absolute -bottom-4 text-[10px] font-semibold text-white/70">{pct.toFixed(1)}%</span>
                 </div>
