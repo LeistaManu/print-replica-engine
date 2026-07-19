@@ -25,6 +25,7 @@ function BulkTrader() {
   const [stake, setStake] = useState(0.5);
   const [trades, setTrades] = useState(1);
   const [current, setCurrent] = useState(489.39);
+  const [currentDigit, setCurrentDigit] = useState(5);
   const [dist, setDist] = useState<number[]>([10.8, 9.6, 8.6, 9.6, 9.3, 9.9, 11.4, 9.5, 10.3, 11.0]);
   const [history, setHistory] = useState<("E" | "O")[]>(["E", "O", "O", "O", "O", "O", "O", "O"]);
   const evenPct = 50.4;
@@ -32,13 +33,15 @@ function BulkTrader() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      setCurrent((c) => +(c + (Math.random() - 0.5) * 3).toFixed(2));
+      const next = +(current + (Math.random() - 0.5) * 3).toFixed(2);
+      setCurrent(next);
       const nd = Math.floor(Math.random() * 10);
+      setCurrentDigit(nd);
       setHistory((h) => [(nd % 2 === 0 ? "E" : "O") as "E" | "O", ...h].slice(0, 8));
       setDist((d) => d.map((v) => Math.max(6, Math.min(14, v + (Math.random() - 0.5) * 0.3))));
     }, 1300);
     return () => clearInterval(id);
-  }, []);
+  }, [current]);
 
   return (
     <div className="space-y-6">
