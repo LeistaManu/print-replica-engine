@@ -26,7 +26,7 @@ function TradingViewPage() {
       enable_publishing: false,
       allow_symbol_change: true,
       calendar: false,
-      studies: ["STD;RSI", "STD;MACD"],
+      studies: ["STD;RSI", "STD;MACD", "STD;Bollinger_Bands"],
       support_host: "https://www.tradingview.com",
     });
     ref.current.appendChild(script);
