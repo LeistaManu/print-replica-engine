@@ -37,10 +37,18 @@ function TradingBots() {
   const [category, setCategory] = useState<BotCategory | "All">("All");
   const [running, setRunning] = useState<RunningBot[]>([]);
   const [selected, setSelected] = useState<CatalogBot | null>(null);
+  const [subTab, setSubTab] = useState<SubTab>("Free Bots");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // Group filter based on active sub-tab (Free Bots / Scalper Bots / SpeedBots)
+    const inGroup = (b: CatalogBot) =>
+      subTab === "Free Bots" ? (b.group === "Free Bots" || !b.group)
+      : subTab === "Scalper Bots" ? b.group === "Scalper Bots"
+      : subTab === "SpeedBots" ? b.group === "SpeedBots"
+      : true;
     return BOTS.filter((b) =>
+      inGroup(b) &&
       (category === "All" || b.category === category) &&
       (q === "" || b.name.toLowerCase().includes(q) || b.market.toLowerCase().includes(q) || b.description.toLowerCase().includes(q)),
     );
