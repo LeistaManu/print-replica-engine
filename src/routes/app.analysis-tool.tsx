@@ -189,9 +189,8 @@ function AnalysisTool() {
                     </div>
                     <div className="text-[11px] font-semibold text-white/80">{pct.toFixed(1)}%</div>
                     <div className="h-4 text-[10px] text-center">
-                      {isCurrent && <span className="text-orange-400 font-semibold">current digit</span>}
-                      {!isCurrent && isMax && <span className="text-emerald-400 font-semibold">most</span>}
-                      {!isCurrent && isMin && <span className="text-red-400 font-semibold">least frequency</span>}
+                      {isMax && <span className="text-emerald-400 font-semibold">most</span>}
+                      {!isMax && isMin && <span className="text-red-400 font-semibold">least frequency</span>}
                     </div>
                   </div>
                 );
