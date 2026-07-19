@@ -116,7 +116,24 @@ function TradingBots() {
         </div>
       </div>
 
-      {/* Category chips */}
+      {/* Sub-tabs (Free Bots / Scalper Bots / SpeedBots / Calculator / Strategies) */}
+      <div className="flex flex-wrap gap-2">
+        {SUBTABS.map((t) => (
+          <button
+            key={t}
+            onClick={() => setSubTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition inline-flex items-center gap-2 ${
+              subTab === t ? "bg-blue-600 text-white border-blue-600" : "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
+            }`}
+          >
+            {t === "SpeedBots" && <Zap className="w-3.5 h-3.5 text-yellow-400" />}
+            {t === "Scalper Bots" && <Zap className="w-3.5 h-3.5 text-orange-400" />}
+            {t}
+          </button>
+        ))}
+      </div>
+
+
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <span className="text-xs text-white/50 inline-flex items-center gap-1 shrink-0"><Filter className="w-3 h-3" /> Category:</span>
         {(["All", ...CATEGORIES] as const).map((c) => (
