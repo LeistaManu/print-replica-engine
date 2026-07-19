@@ -91,7 +91,8 @@ function TradingBots() {
         duration: bot.duration, strategy: bot.strategy, category: bot.category,
       }));
     } catch {}
-    navigate({ to: "/app/bot-builder" });
+    setToast(`Successfully loaded bot: ${bot.name}`);
+    window.setTimeout(() => navigate({ to: "/app/bot-builder" }), 700);
   }
 
   return (
