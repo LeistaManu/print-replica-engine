@@ -38,6 +38,7 @@ function TradingBots() {
   const [running, setRunning] = useState<RunningBot[]>([]);
   const [selected, setSelected] = useState<CatalogBot | null>(null);
   const [subTab, setSubTab] = useState<SubTab>("Free Bots");
+  const [toast, setToast] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -90,11 +91,18 @@ function TradingBots() {
         duration: bot.duration, strategy: bot.strategy, category: bot.category,
       }));
     } catch {}
-    navigate({ to: "/app/bot-builder" });
+    setToast(`Successfully loaded bot: ${bot.name}`);
+    window.setTimeout(() => navigate({ to: "/app/bot-builder" }), 700);
   }
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-emerald-500 text-slate-900 font-bold shadow-2xl animate-page-in inline-flex items-center gap-2">
+          <span className="grid place-items-center w-6 h-6 rounded-full bg-white/30">✓</span>
+          {toast}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>

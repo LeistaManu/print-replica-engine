@@ -90,9 +90,9 @@ function AnalysisTool() {
 
   // Colors follow frequency ranking (change with volatility) — circles stay put; only the cursor arrow moves.
   const digitStyle = (d: number) => {
-    if (d === ranked.mostIdx) return "bg-emerald-500 text-white border-emerald-500";
-    if (d === ranked.secondIdx) return "bg-blue-500 text-white border-blue-500";
-    if (d === ranked.leastIdx) return "bg-red-500 text-white border-red-500";
+    if (d === ranked.mostIdx) return "bg-emerald-500 text-white ring-2 ring-emerald-300";
+    if (d === ranked.secondIdx) return "bg-blue-500 text-white ring-2 ring-blue-300";
+    if (d === ranked.leastIdx) return "bg-red-500 text-white ring-2 ring-red-300";
     return "bg-white text-slate-800 border-2 border-slate-300";
   };
 
