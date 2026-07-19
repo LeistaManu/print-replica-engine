@@ -88,8 +88,8 @@ function AnalysisTool() {
     return { mostIdx: idx[0].i, secondIdx: idx[1].i, leastIdx: idx[idx.length - 1].i };
   }, [dist]);
 
+  // Colors follow frequency ranking (change with volatility) — circles stay put; only the cursor arrow moves.
   const digitStyle = (d: number) => {
-    if (d === current) return "bg-orange-500 text-white border-orange-500 ring-4 ring-orange-300/60";
     if (d === ranked.mostIdx) return "bg-emerald-500 text-white border-emerald-500";
     if (d === ranked.secondIdx) return "bg-blue-500 text-white border-blue-500";
     if (d === ranked.leastIdx) return "bg-red-500 text-white border-red-500";
