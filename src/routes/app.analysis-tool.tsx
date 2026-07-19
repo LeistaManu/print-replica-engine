@@ -288,6 +288,9 @@ function SignalAnalyzer({
   market: string; setMarket: (m: string) => void;
   latestTick: string; lastDigit: string;
 }) {
+  const [analysis, setAnalysis] = useState<string[] | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
   const logStream = useMemo(() => {
     const arr: string[] = [];
     for (let i = 0; i < 60; i++) arr.push(LOG_LINES[Math.floor(Math.random() * LOG_LINES.length)]);
@@ -296,45 +299,92 @@ function SignalAnalyzer({
 
   const SIG_MARKETS = ["Volatility 10 Index", "Volatility 25 Index", "Volatility 50 Index", "Volatility 75 Index", "Volatility 100 Index"];
 
+  const runAnalysis = () => {
+    const dominatePct = (Math.random() * 30 + 45).toFixed(2);
+    const dominateType = strategy.includes("Even") ? (Math.random() > 0.5 ? "EVEN" : "ODD")
+      : strategy.includes("Over") ? (Math.random() > 0.5 ? "OVER" : "UNDER")
+      : strategy.includes("Rise") ? (Math.random() > 0.5 ? "RISE" : "FALL")
+      : (Math.random() > 0.5 ? "MATCH" : "DIFFER");
+    const digits = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10));
+    const marketCode = market.match(/\d+/)?.[0] ?? "10";
+    const lines = [
+      `Analysis Dashboard - ${strategy} on R_${marketCode}`,
+      `Analysis Complete!`,
+      `${dominateType} numbers dominate (${dominatePct}%)`,
+      digits.join(", "),
+      `Entry Point: Run your bot whenever a ${dominateType.toLowerCase()} signal appears after a sequence of 3 or more consecutive opposite signals.`,
+    ];
+    setAnalysis(lines);
+    setCountdown(5);
+  };
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown < 0) {
+      setAnalysis((a) => a ? [...a, "Bot activated!"] : a);
+      setCountdown(null);
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
   return (
     <div className="relative rounded-xl overflow-hidden border border-cyan-500/40 min-h-[520px] bg-black">
-      {/* Matrix rain log background */}
       <div className="absolute inset-0 p-2 text-[11px] leading-relaxed font-mono text-cyan-400/40 select-none pointer-events-none whitespace-normal break-words">
         {logStream} {logStream}
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/70" />
 
-      {/* Modal */}
-      <div className="relative z-10 max-w-xl mx-auto my-10 p-6 rounded-xl bg-black/70 border border-cyan-500/50 shadow-2xl">
-        <h2 className="text-center text-3xl font-black text-red-500 mb-6 tracking-wide">Signal Analyzer</h2>
-
-        <div className="space-y-4">
-          <div>
-            <div className="text-center text-white text-sm mb-2">Select Strategy</div>
-            <select value={strategy} onChange={(e) => setStrategy(e.target.value)}
-              className="w-full bg-black border border-red-500/60 rounded-lg px-4 py-2.5 text-red-400 font-semibold text-center focus:outline-none">
-              {STRATEGIES.map((s) => <option key={s} value={s} className="bg-black">{s}</option>)}
-            </select>
+      {analysis ? (
+        <div className="relative z-10 max-w-3xl mx-auto my-10 p-6 rounded-xl bg-black/80 border border-cyan-500/60 shadow-2xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-red-500" />
+              <span className="w-3 h-3 rounded-full bg-yellow-500" />
+              <span className="w-3 h-3 rounded-full bg-green-500" />
+            </div>
+            <button onClick={() => { setAnalysis(null); setCountdown(null); }} className="w-8 h-8 grid place-items-center rounded bg-red-600 text-white font-bold">X</button>
           </div>
-
-          <div>
-            <div className="text-center text-white text-sm mb-2">Select Market</div>
-            <select value={market} onChange={(e) => setMarket(e.target.value)}
-              className="w-full bg-black border border-red-500/60 rounded-lg px-4 py-2.5 text-red-400 font-semibold text-center focus:outline-none">
-              {SIG_MARKETS.map((m) => <option key={m} value={m} className="bg-black">{m}</option>)}
-            </select>
+          <div className="font-mono text-emerald-400 text-sm space-y-1.5 max-h-80 overflow-y-auto">
+            {analysis.map((l, i) => <div key={i}>{l}</div>)}
+            {countdown !== null && countdown >= 0 && (
+              <div>Running bot in {countdown} seconds...</div>
+            )}
           </div>
-
-          <div className="pt-6 text-center space-y-3 font-mono">
-            <div className="text-2xl font-bold text-emerald-400">Latest Tick: {latestTick}</div>
-            <div className="text-2xl font-bold text-emerald-400">Last Digit: {lastDigit}</div>
-          </div>
-
-          <button className="w-full mt-4 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-500 text-white font-bold shadow-lg">
-            Analyze Signal
-          </button>
         </div>
-      </div>
+      ) : (
+        <div className="relative z-10 max-w-xl mx-auto my-10 p-6 rounded-xl bg-black/70 border border-cyan-500/50 shadow-2xl">
+          <h2 className="text-center text-3xl font-black text-red-500 mb-6 tracking-wide">Signal Analyzer</h2>
+
+          <div className="space-y-4">
+            <div>
+              <div className="text-center text-white text-sm mb-2">Select Strategy</div>
+              <select value={strategy} onChange={(e) => setStrategy(e.target.value)}
+                className="w-full bg-black border border-red-500/60 rounded-lg px-4 py-2.5 text-red-400 font-semibold text-center focus:outline-none">
+                {STRATEGIES.map((s) => <option key={s} value={s} className="bg-black">{s}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <div className="text-center text-white text-sm mb-2">Select Market</div>
+              <select value={market} onChange={(e) => setMarket(e.target.value)}
+                className="w-full bg-black border border-red-500/60 rounded-lg px-4 py-2.5 text-red-400 font-semibold text-center focus:outline-none">
+                {SIG_MARKETS.map((m) => <option key={m} value={m} className="bg-black">{m}</option>)}
+              </select>
+            </div>
+
+            <div className="pt-6 text-center space-y-3 font-mono">
+              <div className="text-2xl font-bold text-emerald-400">Latest Tick: {latestTick}</div>
+              <div className="text-2xl font-bold text-emerald-400">Last Digit: {lastDigit}</div>
+            </div>
+
+            <button onClick={runAnalysis} className="w-full mt-4 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-500 text-white font-bold shadow-lg hover:from-red-500 hover:to-red-400 transition">
+              Analyze Signal
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
