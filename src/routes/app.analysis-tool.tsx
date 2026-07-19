@@ -66,15 +66,8 @@ function AnalysisTool() {
   const maxIdx = dist.indexOf(Math.max(...dist));
   const minIdx = dist.indexOf(Math.min(...dist));
 
-  const digitStyle = (d: number) => {
-    if (d === current) return "bg-blue-500 text-white ring-4 ring-blue-300 scale-110";
-    if (d === maxIdx) return "bg-emerald-500 text-white";
-    if (d === minIdx) return "bg-red-500 text-white";
-    // secondary highlight — 2nd most frequent gets orange
-    const sorted = [...dist].map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
-    if (d === sorted[1].i) return "bg-orange-500 text-white";
-    return "bg-white text-slate-800 border-2 border-slate-300";
-  };
+  // Uniform digit style — only the cursor/arrow moves to the current digit.
+  const digitStyle = () => "bg-white text-slate-800 border-2 border-slate-300";
 
   const placeManualTrade = (kind: "even" | "odd" | "over" | "under" | "matches" | "differs") => {
     const win = Math.random() > 0.45;
