@@ -14,6 +14,8 @@ export type BotCategory =
   | "Higher/Lower" | "Touch/No Touch" | "Accumulators" | "Multipliers"
   | "Turbos" | "Vanillas" | "Premium";
 
+export type BotGroup = "Free Bots" | "Scalper Bots" | "SpeedBots";
+
 export interface CatalogBot {
   id: string;
   name: string;
@@ -25,6 +27,7 @@ export interface CatalogBot {
   description: string;
   winrate: string;
   premium?: boolean;
+  group?: BotGroup;
   tag?: "New" | "Hot" | "Pro" | "Free";
 }
 
