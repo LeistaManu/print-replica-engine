@@ -14,6 +14,8 @@ export type BotCategory =
   | "Higher/Lower" | "Touch/No Touch" | "Accumulators" | "Multipliers"
   | "Turbos" | "Vanillas" | "Premium";
 
+export type BotGroup = "Free Bots" | "Scalper Bots" | "SpeedBots";
+
 export interface CatalogBot {
   id: string;
   name: string;
@@ -25,6 +27,7 @@ export interface CatalogBot {
   description: string;
   winrate: string;
   premium?: boolean;
+  group?: BotGroup;
   tag?: "New" | "Hot" | "Pro" | "Free";
 }
 
@@ -82,10 +85,28 @@ export const BOTS: CatalogBot[] = [
   { id: "turbo-up-v75", name: "Turbo Long — V75", category: "Turbos", strategy: "fixed", market: M.V75, stake: 3, duration: "5 minutes", description: "Turbo up with fixed stake and payout target.", winrate: "60%" },
   { id: "van-call-v100", name: "Vanilla Call — V100", category: "Vanillas", strategy: "fixed", market: M.V100, stake: 5, duration: "15 minutes", description: "Vanilla call on strong upward momentum.", winrate: "62%" },
 
-  // Premium
-  { id: "prem-ai-signals", name: "Xenon AI Signals Bot", category: "Premium", strategy: "1326", market: M.V100, stake: 1, duration: "1 tick", description: "Uses AI digit-signal feed to enter Over/Under & Matches trades.", winrate: "78%", premium: true, tag: "Pro" },
-  { id: "prem-scalper", name: "Gemini Tick Scalper", category: "Premium", strategy: "oscar", market: M.V10, stake: 1, duration: "1 tick", description: "Scalps 1-second index ticks with adaptive stake sizing.", winrate: "71%", premium: true, tag: "Hot" },
-  { id: "prem-safe", name: "Safe Compounder Pro", category: "Premium", strategy: "dalembert", market: M.V25, stake: 1, duration: "5 ticks", description: "Capital-preservation compounder with drawdown guard.", winrate: "68%", premium: true },
+  // Premium (dollarprinter.com free/scalper/speed bots — all premium, all "Load Premium Bot")
+  // Free Bots
+  { id: "prem-alpha-2026", name: "Alpha Version 2026 Edition", category: "Premium", strategy: "1326", market: M.V100, stake: 1, duration: "1 tick", description: "Alpha Version 2026 Edition — Premium trading bot with cutting-edge 2026 algorithms. Features advanced market analysis and automated execution for consistent profits.", winrate: "78%", premium: true, group: "Free Bots", tag: "Pro" },
+  { id: "prem-ai-signal-scanner", name: "AI SIGNAL SCANNER", category: "Premium", strategy: "1326", market: M.V75, stake: 1, duration: "1 tick", description: "AI Signal Scanner — Intelligent market scanner that detects high-probability setups and automates trade execution with built-in risk controls.", winrate: "82%", premium: true, group: "Free Bots", tag: "Hot" },
+  { id: "prem-binary-expert-v6", name: "Binary Expert V6 pro", category: "Premium", strategy: "martingale", market: M.V100, stake: 1, duration: "1 tick", description: "Binary Expert V6 Pro — Professional-grade binary trading bot. Advanced version 6 with expert-level strategies and high-accuracy signal processing.", winrate: "75%", premium: true, group: "Free Bots" },
+  { id: "prem-dp-bot11", name: "DOLLAR PRINTER BOT11", category: "Premium", strategy: "dalembert", market: M.V50, stake: 1, duration: "1 tick", description: "Professional Dollar Printer bot version 11. Advanced automated trading system designed for consistent profits with intelligent risk management.", winrate: "73%", premium: true, group: "Free Bots" },
+  { id: "prem-dp-ai-2026", name: "Dollar Print Ai Version 2026", category: "Premium", strategy: "1326", market: M.V75, stake: 1, duration: "1 tick", description: "AI-powered Dollar Print trading bot 2026 Edition. Features machine learning algorithms for optimal entry and exit points with automated profit taking.", winrate: "79%", premium: true, group: "Free Bots", tag: "New" },
+  { id: "prem-dp-entry-v1", name: "Dp Entry point Bot V1", category: "Premium", strategy: "oscar", market: M.V25, stake: 1, duration: "1 tick", description: "Entry Point Bot V1 — Smart entry detection system. Identifies optimal trading opportunities with precision timing and risk management.", winrate: "71%", premium: true, group: "Free Bots" },
+  { id: "prem-expert-speed-v1", name: "Expert Speed Bot V1 2026", category: "Premium", strategy: "martingale", market: M.V100, stake: 1, duration: "1 tick", description: "Expert Speed Bot V1 2026 — Next-generation high-speed execution bot. Optimized for rapid trades with 2026 advanced profit strategies and smart risk.", winrate: "80%", premium: true, group: "SpeedBots", tag: "Hot" },
+  { id: "prem-maziwa-2026", name: "Maziwa Bot 2026 Version", category: "Premium", strategy: "fibonacci", market: M.V75, stake: 1, duration: "1 tick", description: "Maziwa Bot 2026 Version — Powerful and automated trading bot. Built for consistent market performance with intelligent entry and exit signals.", winrate: "76%", premium: true, group: "Free Bots" },
+
+  // Scalper Bots
+  { id: "prem-tick-scalper", name: "Gemini Tick Scalper", category: "Premium", strategy: "oscar", market: M.V10, stake: 1, duration: "1 tick", description: "Scalps 1-second index ticks with adaptive stake sizing and micro take-profit targets for high-frequency wins.", winrate: "71%", premium: true, group: "Scalper Bots", tag: "Hot" },
+  { id: "prem-lightning-scalp", name: "Lightning Scalper Pro", category: "Premium", strategy: "1326", market: M.V25, stake: 1, duration: "1 tick", description: "Ultra-fast scalping bot for Volatility 25. Enters and exits within a single tick using aggressive edge detection.", winrate: "74%", premium: true, group: "Scalper Bots" },
+  { id: "prem-micro-scalp", name: "Micro Scalp X", category: "Premium", strategy: "dalembert", market: M.V50, stake: 1, duration: "1 tick", description: "Micro-lot scalper that compounds tiny wins on Volatility 50 with drawdown protection.", winrate: "70%", premium: true, group: "Scalper Bots" },
+  { id: "prem-under-scalper", name: "Under 6 Scalper", category: "Premium", strategy: "martingale", market: M.V100, stake: 1, duration: "1 tick", description: "Scalps Digits Under 6 contracts with rapid recovery martingale on losing streaks.", winrate: "73%", premium: true, group: "Scalper Bots", tag: "Pro" },
+
+  // SpeedBots
+  { id: "prem-speed-x", name: "Speed X 2026", category: "Premium", strategy: "martingale", market: M.V100, stake: 1, duration: "1 tick", description: "High-speed 2026 execution engine tuned for Volatility 100. Enters multiple contracts per second under favorable conditions.", winrate: "77%", premium: true, group: "SpeedBots", tag: "Hot" },
+  { id: "prem-turbo-speed", name: "Turbo Speed Bot", category: "Premium", strategy: "1326", market: M.V75, stake: 1, duration: "1 tick", description: "Turbo speed execution for Volatility 75 with instant re-entry after wins for compounding streaks.", winrate: "72%", premium: true, group: "SpeedBots" },
+  { id: "prem-quantum-speed", name: "Quantum Speed AI", category: "Premium", strategy: "1326", market: M.V50, stake: 1, duration: "1 tick", description: "AI-tuned high-speed bot with quantum-inspired signal processing on Volatility 50.", winrate: "78%", premium: true, group: "SpeedBots", tag: "New" },
+  { id: "prem-safe-compounder", name: "Safe Compounder Pro", category: "Premium", strategy: "dalembert", market: M.V25, stake: 1, duration: "5 ticks", description: "Capital-preservation compounder with drawdown guard and adaptive stake sizing.", winrate: "68%", premium: true, group: "SpeedBots" },
 ];
 
 export const CATEGORIES: BotCategory[] = [
