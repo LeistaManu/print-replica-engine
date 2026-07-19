@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Play, Pause, Square, Search, Download, Star, Zap, Bot as BotIcon,
-  Sparkles, Filter, Trash2, ExternalLink, TrendingUp,
+  Filter, Trash2, ExternalLink, TrendingUp,
 } from "lucide-react";
 import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory, type BotGroup } from "@/lib/bots-catalog";
 
