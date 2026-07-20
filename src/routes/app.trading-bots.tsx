@@ -42,12 +42,9 @@ function TradingBots() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    // Group filter based on active sub-tab (Free Bots / Scalper Bots / SpeedBots)
+    // Only one group is exposed now — Free Bots (premium roster).
     const inGroup = (b: CatalogBot) =>
-      subTab === "Free Bots" ? (b.group === "Free Bots" || !b.group)
-      : subTab === "Scalper Bots" ? b.group === "Scalper Bots"
-      : subTab === "SpeedBots" ? b.group === "SpeedBots"
-      : true;
+      subTab === "Free Bots" ? (b.group === "Free Bots" || !b.group) : true;
     return BOTS.filter((b) =>
       inGroup(b) &&
       (category === "All" || b.category === category) &&
