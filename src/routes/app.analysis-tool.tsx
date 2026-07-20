@@ -292,7 +292,7 @@ function AnalysisTool() {
       )}
 
       {/* Floating AI bubble */}
-      <button className="fixed bottom-24 right-6 z-40 group">
+      <button onClick={() => setAiOpen(true)} className="fixed bottom-24 right-6 z-40 group">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 grid place-items-center shadow-2xl animate-float">
           <Bot className="w-7 h-7 text-white" />
         </div>
@@ -302,6 +302,157 @@ function AnalysisTool() {
       </button>
 
       <button className="px-4 py-2 rounded-lg bg-yellow-400 text-slate-900 font-bold text-xs">Risk Disclaimer</button>
+
+      {wideEyeOpen && (
+        <WideEyeModal
+          onClose={() => setWideEyeOpen(false)}
+          market={market}
+          dist={dist}
+          history={history}
+          current={current}
+          ranked={ranked}
+        />
+      )}
+      {aiOpen && (
+        <LaunchAIModal
+          onClose={() => setAiOpen(false)}
+          market={market}
+          dist={dist}
+          ranked={ranked}
+        />
+      )}
+    </div>
+  );
+}
+
+/* -------- Wide Eye — full digit intelligence panel -------- */
+function WideEyeModal({ onClose, market, dist, history, current, ranked }: {
+  onClose: () => void; market: string; dist: number[]; history: number[]; current: number;
+  ranked: { mostIdx: number; secondIdx: number; secondLeastIdx: number; leastIdx: number };
+}) {
+  const evens = dist.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
+  const odds = 100 - evens;
+  const over = dist.slice(6).reduce((a, b) => a + b, 0);
+  const under = dist.slice(0, 5).reduce((a, b) => a + b, 0);
+  const streak = (() => {
+    let s = 1;
+    for (let i = history.length - 2; i >= 0; i--) {
+      if ((history[i] % 2) === (history[history.length - 1] % 2)) s++; else break;
+    }
+    return s;
+  })();
+  const rows = history.slice(-30).reverse();
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
+      <div className="w-full max-w-3xl rounded-2xl bg-[#0b1020] border border-pink-500/40 p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-pink-400">Wide Eye · Deep Digit Intelligence</div>
+            <h2 className="text-xl font-bold">{market}</h2>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 grid place-items-center rounded bg-red-600 text-white font-bold">✕</button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30"><div className="text-[10px] text-emerald-300 uppercase">Most</div><div className="text-2xl font-black text-emerald-400">{ranked.mostIdx}</div><div className="text-[11px] text-white/60">{dist[ranked.mostIdx].toFixed(1)}%</div></div>
+          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30"><div className="text-[10px] text-blue-300 uppercase">2nd Most</div><div className="text-2xl font-black text-blue-400">{ranked.secondIdx}</div><div className="text-[11px] text-white/60">{dist[ranked.secondIdx].toFixed(1)}%</div></div>
+          <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30"><div className="text-[10px] text-orange-300 uppercase">2nd Least</div><div className="text-2xl font-black text-orange-400">{ranked.secondLeastIdx}</div><div className="text-[11px] text-white/60">{dist[ranked.secondLeastIdx].toFixed(1)}%</div></div>
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30"><div className="text-[10px] text-red-300 uppercase">Least</div><div className="text-2xl font-black text-red-400">{ranked.leastIdx}</div><div className="text-[11px] text-white/60">{dist[ranked.leastIdx].toFixed(1)}%</div></div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-3">
+          <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+            <div className="text-xs uppercase text-white/50 mb-2">Even vs Odd</div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-3 rounded-full bg-black/40 overflow-hidden flex">
+                <div className="h-full bg-blue-500" style={{ width: `${evens}%` }} />
+                <div className="h-full bg-red-500" style={{ width: `${odds}%` }} />
+              </div>
+            </div>
+            <div className="flex justify-between text-xs mt-2"><span className="text-blue-300">Even {evens.toFixed(1)}%</span><span className="text-red-300">Odd {odds.toFixed(1)}%</span></div>
+          </div>
+          <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+            <div className="text-xs uppercase text-white/50 mb-2">Over 5 vs Under 5</div>
+            <div className="flex-1 h-3 rounded-full bg-black/40 overflow-hidden flex">
+              <div className="h-full bg-emerald-500" style={{ width: `${over}%` }} />
+              <div className="h-full bg-orange-500" style={{ width: `${under}%` }} />
+            </div>
+            <div className="flex justify-between text-xs mt-2"><span className="text-emerald-300">Over {over.toFixed(1)}%</span><span className="text-orange-300">Under {under.toFixed(1)}%</span></div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+          <div className="text-xs uppercase text-white/50 mb-2">Full digit heatmap</div>
+          <div className="grid grid-cols-10 gap-1.5">
+            {dist.map((v, d) => {
+              const intensity = Math.min(1, v / 15);
+              return (
+                <div key={d} className="text-center">
+                  <div className="rounded-md py-2 font-black text-lg text-white" style={{ background: `rgba(34,197,94,${intensity})`, boxShadow: d === current ? "0 0 0 2px #a855f7" : undefined }}>{d}</div>
+                  <div className="text-[10px] text-white/60 mt-1">{v.toFixed(1)}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+          <div className="text-xs uppercase text-white/50 mb-2">Last 30 ticks · current parity streak: <span className="text-yellow-300 font-bold">{streak}</span></div>
+          <div className="flex flex-wrap gap-1 font-mono text-xs">
+            {rows.map((d, i) => (
+              <span key={i} className={`w-6 h-6 grid place-items-center rounded ${d % 2 === 0 ? "bg-blue-500/20 text-blue-200" : "bg-red-500/20 text-red-200"}`}>{d}</span>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg bg-gradient-to-br from-pink-500/10 to-orange-500/10 border border-pink-500/30 text-sm">
+          <div className="font-bold text-pink-300 mb-1">Wide Eye recommendation</div>
+          <div className="text-white/80">
+            Digit <b className="text-emerald-400">{ranked.mostIdx}</b> dominates at {dist[ranked.mostIdx].toFixed(1)}% — favour <b>Matches {ranked.mostIdx}</b> and <b>Differs {ranked.leastIdx}</b>. Parity leans {evens > odds ? "EVEN" : "ODD"} ({Math.max(evens, odds).toFixed(1)}%); consider {over > under ? "Over 5" : "Under 5"} for barrier trades.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------- Launch AI — quick AI signal snapshot -------- */
+function LaunchAIModal({ onClose, market, dist, ranked }: {
+  onClose: () => void; market: string; dist: number[];
+  ranked: { mostIdx: number; secondIdx: number; secondLeastIdx: number; leastIdx: number };
+}) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setStep((s) => Math.min(s + 1, 4)), 700);
+    return () => clearInterval(id);
+  }, []);
+  const steps = [
+    "Connecting to Digittool AI engine…",
+    "Streaming last 1000 ticks…",
+    "Running Bayesian frequency model…",
+    "Cross-checking parity + over/under drift…",
+    "Analysis complete.",
+  ];
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl bg-[#050914] border border-cyan-400/60 p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div className="inline-flex items-center gap-2"><Bot className="w-5 h-5 text-cyan-400" /><h2 className="text-lg font-bold text-cyan-300">Digittool AI</h2></div>
+          <button onClick={onClose} className="w-8 h-8 grid place-items-center rounded bg-red-600 text-white font-bold">✕</button>
+        </div>
+        <div className="text-xs text-white/60">{market}</div>
+        <div className="font-mono text-emerald-400 text-sm space-y-1 min-h-[9rem]">
+          {steps.slice(0, step + 1).map((s, i) => <div key={i}>[AI] {s}</div>)}
+        </div>
+        {step >= 4 && (
+          <div className="p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/40 text-sm space-y-1">
+            <div><span className="text-white/60">Signal:</span> <b className="text-emerald-400">Matches {ranked.mostIdx}</b> · confidence {(dist[ranked.mostIdx] + 45).toFixed(0)}%</div>
+            <div><span className="text-white/60">Backup:</span> <b className="text-red-400">Differs {ranked.leastIdx}</b></div>
+            <div><span className="text-white/60">Avoid:</span> <b className="text-orange-300">Matches {ranked.secondLeastIdx}</b></div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
