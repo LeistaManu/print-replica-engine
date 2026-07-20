@@ -4,7 +4,7 @@ import {
   Play, Pause, Square, Search, Download, Star, Zap, Bot as BotIcon,
   Filter, Trash2, ExternalLink, TrendingUp,
 } from "lucide-react";
-import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory, type BotGroup } from "@/lib/bots-catalog";
+import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory } from "@/lib/bots-catalog";
 
 type SubTab = "Free Bots" | "Calculator" | "Strategies";
 const SUBTABS: SubTab[] = ["Free Bots", "Calculator", "Strategies"];
