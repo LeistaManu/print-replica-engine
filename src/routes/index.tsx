@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Zap, Check, Star, Bot, BarChart3, Users, Shield, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { handleLogin, handleSignup } from "@/lib/deriv";
