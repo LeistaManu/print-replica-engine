@@ -477,19 +477,66 @@ function SignalAnalyzer({
   const SIG_MARKETS = ["Volatility 10 Index", "Volatility 25 Index", "Volatility 50 Index", "Volatility 75 Index", "Volatility 100 Index"];
 
   const runAnalysis = () => {
-    const dominatePct = (Math.random() * 30 + 45).toFixed(2);
-    const dominateType = strategy.includes("Even") ? (Math.random() > 0.5 ? "EVEN" : "ODD")
-      : strategy.includes("Over") ? (Math.random() > 0.5 ? "OVER" : "UNDER")
-      : strategy.includes("Rise") ? (Math.random() > 0.5 ? "RISE" : "FALL")
-      : (Math.random() > 0.5 ? "MATCH" : "DIFFER");
-    const digits = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10));
+    // Build a realistic per-strategy analysis dashboard modeled on dollarprinter.com.
     const marketCode = market.match(/\d+/)?.[0] ?? "10";
+    const sample = Array.from({ length: 500 }, () => Math.floor(Math.random() * 10));
+    const counts = new Array(10).fill(0);
+    sample.forEach((d) => (counts[d] += 1));
+    const pct = counts.map((c) => (c / sample.length) * 100);
+    const evens = pct.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
+    const odds = 100 - evens;
+    const over = pct.slice(6).reduce((a, b) => a + b, 0);
+    const under = pct.slice(0, 5).reduce((a, b) => a + b, 0);
+    const rises = 48 + Math.random() * 6;
+    const falls = 100 - rises;
+    const ordered = pct.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
+    const most = ordered[0], least = ordered[9];
+
+    let dominateType = "MATCH", dominatePct = "50.00", secondary = "";
+    if (strategy.includes("Even")) {
+      dominateType = evens > odds ? "EVEN" : "ODD";
+      dominatePct = Math.max(evens, odds).toFixed(2);
+      secondary = `Opposite side: ${(100 - Number(dominatePct)).toFixed(2)}%`;
+    } else if (strategy.includes("Over")) {
+      dominateType = over > under ? "OVER 5" : "UNDER 5";
+      dominatePct = Math.max(over, under).toFixed(2);
+      secondary = `Digit 5 neutral zone: ${pct[5].toFixed(2)}%`;
+    } else if (strategy.includes("Rise")) {
+      dominateType = rises > falls ? "RISE" : "FALL";
+      dominatePct = Math.max(rises, falls).toFixed(2);
+      secondary = `Opposite direction: ${(100 - Number(dominatePct)).toFixed(2)}%`;
+    } else {
+      dominateType = Math.random() > 0.5 ? "MATCH" : "DIFFER";
+      dominatePct = (dominateType === "MATCH" ? most.v + 10 : 100 - least.v).toFixed(2);
+      secondary = `Target digit: ${dominateType === "MATCH" ? most.i : least.i}`;
+    }
+
+    const topDigits = ordered.slice(0, 3).map((x) => `${x.i} (${x.v.toFixed(1)}%)`).join(", ");
+    const coldDigits = ordered.slice(-3).map((x) => `${x.i} (${x.v.toFixed(1)}%)`).join(", ");
+    const recommended = strategy.includes("Even") ? `Buy ${dominateType} after 3 opposite signals in a row`
+      : strategy.includes("Over") ? `Trade ${dominateType} with fixed stake, martingale after 2 losses`
+      : strategy.includes("Rise") ? `Enter ${dominateType} on the 3rd consecutive opposite candle`
+      : `${dominateType} digit ${dominateType === "MATCH" ? most.i : least.i} with 1-3-2-6 progression`;
+
     const lines = [
-      `Analysis Dashboard - ${strategy} on R_${marketCode}`,
-      `Analysis Complete!`,
-      `${dominateType} numbers dominate (${dominatePct}%)`,
-      digits.join(", "),
-      `Entry Point: Run your bot whenever a ${dominateType.toLowerCase()} signal appears after a sequence of 3 or more consecutive opposite signals.`,
+      `╔══ Analysis Dashboard · ${strategy} on R_${marketCode} ══╗`,
+      `[OK] Sample size: 500 ticks`,
+      `[OK] Analysis Complete!`,
+      ``,
+      `► ${dominateType} numbers dominate (${dominatePct}%)`,
+      `  ${secondary}`,
+      ``,
+      `► Hot digits: ${topDigits}`,
+      `► Cold digits: ${coldDigits}`,
+      `► Most frequent: ${most.i}  ·  Least frequent: ${least.i}`,
+      ``,
+      `► Even ${evens.toFixed(1)}% | Odd ${odds.toFixed(1)}%`,
+      `► Over 5 ${over.toFixed(1)}% | Under 5 ${under.toFixed(1)}%`,
+      ``,
+      `► Recommended Entry Point:`,
+      `  ${recommended}`,
+      ``,
+      `► Suggested stake: $1.00  ·  Target profit: $10  ·  Stop loss: -$5`,
     ];
     setAnalysis(lines);
     setCountdown(5);
