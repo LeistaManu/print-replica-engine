@@ -6,8 +6,8 @@ import {
 } from "lucide-react";
 import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory, type BotGroup } from "@/lib/bots-catalog";
 
-type SubTab = BotGroup | "Calculator" | "Strategies";
-const SUBTABS: SubTab[] = ["Free Bots", "Scalper Bots", "SpeedBots", "Calculator", "Strategies"];
+type SubTab = "Free Bots" | "Calculator" | "Strategies";
+const SUBTABS: SubTab[] = ["Free Bots", "Calculator", "Strategies"];
 
 export const Route = createFileRoute("/app/trading-bots")({
   head: () => ({ meta: [{ title: "Trading Bots — Digittool" }] }),
