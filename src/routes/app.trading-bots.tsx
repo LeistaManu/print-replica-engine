@@ -131,8 +131,6 @@ function TradingBots() {
               subTab === t ? "bg-blue-600 text-white border-blue-600" : "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
             }`}
           >
-            {t === "SpeedBots" && <Zap className="w-3.5 h-3.5 text-yellow-400" />}
-            {t === "Scalper Bots" && <Zap className="w-3.5 h-3.5 text-orange-400" />}
             {t}
           </button>
         ))}
