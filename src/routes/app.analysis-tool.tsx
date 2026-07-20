@@ -48,6 +48,12 @@ function AnalysisTool() {
   const [latestTick, setLatestTick] = useState<string>("--");
   const [lastDigit, setLastDigit] = useState<string>("--");
 
+  // Reset the digit history whenever the user picks a different market so the
+  // colored circles visibly shift with volatility.
+  useEffect(() => {
+    setHistory(Array.from({ length: 1000 }, () => Math.floor(Math.random() * 10)));
+  }, [market]);
+
   useEffect(() => {
     const id = setInterval(() => {
       setPrice((p) => {
@@ -82,17 +88,26 @@ function AnalysisTool() {
     return counts.map((c) => (c / window.length) * 100);
   }, [history, ticks]);
 
-  // Rank digits by frequency: 1st = green, 2nd = blue, last = red, current = orange
+  // Frequency ranking → 4-color palette (mirrors dollarprinter.com):
+  //   green  = most frequent
+  //   blue   = 2nd most frequent
+  //   orange = 2nd least frequent
+  //   red    = least frequent
   const ranked = useMemo(() => {
     const idx = dist.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
-    return { mostIdx: idx[0].i, secondIdx: idx[1].i, leastIdx: idx[idx.length - 1].i };
+    return {
+      mostIdx: idx[0].i,
+      secondIdx: idx[1].i,
+      secondLeastIdx: idx[idx.length - 2].i,
+      leastIdx: idx[idx.length - 1].i,
+    };
   }, [dist]);
 
-  // Colors follow frequency ranking (change with volatility) — circles stay put; only the cursor arrow moves.
   const digitStyle = (d: number) => {
     if (d === ranked.mostIdx) return "bg-emerald-500 text-white ring-2 ring-emerald-300";
     if (d === ranked.secondIdx) return "bg-blue-500 text-white ring-2 ring-blue-300";
     if (d === ranked.leastIdx) return "bg-red-500 text-white ring-2 ring-red-300";
+    if (d === ranked.secondLeastIdx) return "bg-orange-500 text-white ring-2 ring-orange-300";
     return "bg-white text-slate-800 border-2 border-slate-300";
   };
 
