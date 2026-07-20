@@ -41,6 +41,8 @@ function AnalysisTool() {
   const [tradeMode, setTradeMode] = useState<"manual" | "bot">("manual");
   const [stake, setStake] = useState(1);
   const [journal, setJournal] = useState<{ t: string; msg: string; ok: boolean }[]>([]);
+  const [wideEyeOpen, setWideEyeOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   // Signals sub-tab state
   const [sigStrategy, setSigStrategy] = useState(STRATEGIES[0]);
