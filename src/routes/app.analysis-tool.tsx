@@ -149,8 +149,8 @@ function AnalysisTool() {
           {/* Action row */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <button className="px-5 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold text-sm shadow-lg">Wide Eye</button>
-              <button className="px-5 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold text-sm shadow-lg">Launch AI</button>
+              <button onClick={() => setWideEyeOpen(true)} className="px-5 py-2 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold text-sm shadow-lg hover:brightness-110">Wide Eye</button>
+              <button onClick={() => setAiOpen(true)} className="px-5 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold text-sm shadow-lg hover:brightness-110">Launch AI</button>
               <button className="w-8 h-8 grid place-items-center rounded-full bg-white/10 text-white/70"><Info className="w-4 h-4" /></button>
             </div>
             <button
