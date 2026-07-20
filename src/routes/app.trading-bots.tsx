@@ -4,10 +4,10 @@ import {
   Play, Pause, Square, Search, Download, Star, Zap, Bot as BotIcon,
   Filter, Trash2, ExternalLink, TrendingUp,
 } from "lucide-react";
-import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory, type BotGroup } from "@/lib/bots-catalog";
+import { BOTS, CATEGORIES, LOAD_KEY, type CatalogBot, type BotCategory } from "@/lib/bots-catalog";
 
-type SubTab = BotGroup | "Calculator" | "Strategies";
-const SUBTABS: SubTab[] = ["Free Bots", "Scalper Bots", "SpeedBots", "Calculator", "Strategies"];
+type SubTab = "Free Bots" | "Calculator" | "Strategies";
+const SUBTABS: SubTab[] = ["Free Bots", "Calculator", "Strategies"];
 
 export const Route = createFileRoute("/app/trading-bots")({
   head: () => ({ meta: [{ title: "Trading Bots — Digittool" }] }),
@@ -42,12 +42,9 @@ function TradingBots() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    // Group filter based on active sub-tab (Free Bots / Scalper Bots / SpeedBots)
+    // Only one group is exposed now — Free Bots (premium roster).
     const inGroup = (b: CatalogBot) =>
-      subTab === "Free Bots" ? (b.group === "Free Bots" || !b.group)
-      : subTab === "Scalper Bots" ? b.group === "Scalper Bots"
-      : subTab === "SpeedBots" ? b.group === "SpeedBots"
-      : true;
+      subTab === "Free Bots" ? (b.group === "Free Bots" || !b.group) : true;
     return BOTS.filter((b) =>
       inGroup(b) &&
       (category === "All" || b.category === category) &&
@@ -134,8 +131,6 @@ function TradingBots() {
               subTab === t ? "bg-blue-600 text-white border-blue-600" : "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
             }`}
           >
-            {t === "SpeedBots" && <Zap className="w-3.5 h-3.5 text-yellow-400" />}
-            {t === "Scalper Bots" && <Zap className="w-3.5 h-3.5 text-orange-400" />}
             {t}
           </button>
         ))}

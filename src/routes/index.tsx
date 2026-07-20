@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Zap, Check, Star, Bot, BarChart3, Users, Shield, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { handleLogin, handleSignup } from "@/lib/deriv";
@@ -77,6 +77,20 @@ function useTypewriter(words: string[]) {
 function LandingPage() {
   const typed = useTypewriter(typewriterPhrases);
   const loop = [...testimonials, ...testimonials];
+  const navigate = useNavigate();
+  // If Deriv OAuth returned us to "/" (?acct1=…&token1=…) or we flagged an
+  // in-flight auth, jump straight into the workspace.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const qs = new URLSearchParams(window.location.search);
+    const returned = qs.has("acct1") || qs.has("token1") || qs.has("code");
+    let flagged = false;
+    try { flagged = !!sessionStorage.getItem("digittool.postAuthReturn"); } catch {}
+    if (returned || flagged) {
+      try { sessionStorage.removeItem("digittool.postAuthReturn"); } catch {}
+      navigate({ to: "/app/bot-builder", replace: true });
+    }
+  }, [navigate]);
   return (
     <div className="min-h-screen animate-page-in overflow-x-hidden">
       {/* Nav */}

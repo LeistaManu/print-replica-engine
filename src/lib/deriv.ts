@@ -1,7 +1,7 @@
 // Deriv OAuth + affiliate + cashier helpers.
-// Login / Signup open Deriv in a NEW tab (avoids popup blockers) and
-// immediately navigate THIS tab to the workspace so the user is "returned"
-// to our site right away.
+// Login / Signup redirect the CURRENT tab to Deriv (same-tab flow like
+// dollarprinter.com) so Deriv's OAuth return sends the user back to our site
+// automatically — no popup blockers, no orphan tabs.
 
 export const DERIV_APP_ID = "36300";
 export const DERIV_OAUTH_URL = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}`;
@@ -13,42 +13,33 @@ export const SUPPORT_PHONE_DISPLAY = "0700210017";
 
 const RETURN_TO = "/app/bot-builder";
 
+function sameTab(url: string) {
+  if (typeof window === "undefined") return;
+  try { sessionStorage.setItem("digittool.postAuthReturn", RETURN_TO); } catch {}
+  window.location.assign(url);
+}
+
 function openInNewTab(url: string) {
   if (typeof window === "undefined") return;
   try {
     const w = window.open(url, "_blank", "noopener,noreferrer");
     if (w) return;
   } catch {}
-  // Last-resort fallback: temp anchor click (works when window.open is blocked).
   try {
     const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); a.remove();
   } catch {}
-}
-
-function goToWorkspace() {
-  if (typeof window === "undefined") return;
-  // Only navigate if we're not already there — avoids a reload loop.
-  if (!window.location.pathname.startsWith("/app")) {
-    window.location.href = RETURN_TO;
-  }
 }
 
 export function handleLogin(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  openInNewTab(DERIV_OAUTH_URL);
-  goToWorkspace();
+  sameTab(DERIV_OAUTH_URL);
 }
 
 export function handleSignup(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  openInNewTab(DERIV_SIGNUP_URL);
-  goToWorkspace();
+  sameTab(DERIV_SIGNUP_URL);
 }
 
 export function handleDeposit(e?: { preventDefault?: () => void }) {
