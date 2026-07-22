@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, Blocks, LineChart, Bot, Layers, Activity, FileBarChart, Calculator, Copy, TrendingUp, Phone, LogIn, UserPlus, FileText, Wallet, X, ArrowDownCircle, ArrowUpCircle, CandlestickChart } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DollarRain } from "@/components/DollarRain";
 import { handleLogin, handleSignup, handleDeposit, handleWithdraw, SUPPORT_PHONE, SUPPORT_PHONE_DISPLAY } from "@/lib/deriv";
 
@@ -33,8 +33,19 @@ function AppLayout() {
   const [showMarquee, setShowMarquee] = useState(true);
   const [showCashier, setShowCashier] = useState(false);
   const [currency, setCurrency] = useState<"KES" | "USD">("KES");
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
   const balance = currency === "KES" ? "1,293,024.34 KES" : "9,987.42 USD";
   const isDeposit = currency === "KES"; // toggle deposit/withdraw look like the ref
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const qs = new URLSearchParams(window.location.search);
+    const returned = qs.has("acct1") || qs.has("token1") || qs.has("code") || qs.has("state");
+    if (!returned) return;
+    try { sessionStorage.removeItem("digittool.postAuthReturn"); } catch {}
+    setAuthNotice("Deriv login returned successfully.");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white">
@@ -148,6 +159,14 @@ function AppLayout() {
       </header>
 
       <main className="max-w-[1600px] mx-auto p-4 md:p-6">
+        {authNotice && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-semibold text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.16)]">
+            <span>{authNotice}</span>
+            <button onClick={() => setAuthNotice(null)} className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white" aria-label="Dismiss Deriv login message">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div key={pathname} className="animate-page-in">
           <Outlet />
         </div>
