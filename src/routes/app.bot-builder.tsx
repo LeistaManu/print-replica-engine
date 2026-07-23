@@ -359,97 +359,100 @@ function BotBuilder() {
           <ToolBtn icon={Save} title="Save" onClick={() => { localStorage.setItem("digittool-bot", JSON.stringify(cfg())); setJournal((p) => [`[${new Date().toLocaleTimeString()}] Saved`, ...p]); }} />
         </div>
 
-        <div className="relative min-h-[720px] rounded-xl bg-[#0d1220] border border-white/10 p-4 md:p-6 overflow-auto"
+        <div className="relative min-h-[560px] rounded-xl bg-[#0d1220] border border-white/10 p-4 md:p-6 overflow-auto"
              style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
-          {/* 1. Trade parameters */}
-          <BlockGroup title="1. Trade parameters">
-            <FieldRow label="Market">
-              <Select value={marketCat} onChange={setMarketCat} options={MARKET_CATS} />
-              <span className="text-white/50">›</span>
-              <Select value={submarket} onChange={setSubmarket} options={SUBMARKETS[marketCat]} />
-              <span className="text-white/50">›</span>
-              <Select value={symbol} onChange={setSymbol} options={SYMBOLS[submarket] ?? []} />
-            </FieldRow>
-            <FieldRow label="Trade Type">
-              <Select value={tradeCat} onChange={setTradeCat} options={TRADE_TYPE_CATS} />
-              <span className="text-white/50">›</span>
-              <Select value={tradeType} onChange={setTradeType} options={TRADE_TYPES[tradeCat] ?? []} />
-            </FieldRow>
-            <FieldRow label="Contract Type">
-              <Select value={contract} onChange={setContract} options={contractOptions} />
-            </FieldRow>
-            <FieldRow label="Default Candle Interval">
-              <Select value={interval} onChange={setIntervalV} options={INTERVALS} />
-            </FieldRow>
-            <label className="flex items-center gap-2 text-xs text-white/70 py-1 cursor-pointer">
-              <input type="checkbox" checked={restartOnError} onChange={(e) => setRestartOnError(e.target.checked)} />
-              Restart buy/sell on error (disable for better performance)
-            </label>
-            <label className="flex items-center gap-2 text-xs text-white/70 py-1 cursor-pointer">
-              <input type="checkbox" checked={restartLast} onChange={(e) => setRestartLast(e.target.checked)} />
-              Restart last trade on error (bot ignores the unsuccessful trade)
-            </label>
+          {/* Row: 1. Trade parameters + 2. Purchase conditions side by side */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+            <BlockGroup title="1. Trade parameters">
+              <FieldRow label="Market">
+                <Select value={marketCat} onChange={setMarketCat} options={MARKET_CATS} />
+                <span className="text-white/50">›</span>
+                <Select value={submarket} onChange={setSubmarket} options={SUBMARKETS[marketCat]} />
+                <span className="text-white/50">›</span>
+                <Select value={symbol} onChange={setSymbol} options={SYMBOLS[submarket] ?? []} />
+              </FieldRow>
+              <FieldRow label="Trade Type">
+                <Select value={tradeCat} onChange={setTradeCat} options={TRADE_TYPE_CATS} />
+                <span className="text-white/50">›</span>
+                <Select value={tradeType} onChange={setTradeType} options={TRADE_TYPES[tradeCat] ?? []} />
+              </FieldRow>
+              <FieldRow label="Contract Type">
+                <Select value={contract} onChange={setContract} options={contractOptions} />
+              </FieldRow>
+              <FieldRow label="Default Candle Interval">
+                <Select value={interval} onChange={setIntervalV} options={INTERVALS} />
+              </FieldRow>
+              <label className="flex items-center gap-2 text-xs text-white/70 py-1 cursor-pointer">
+                <input type="checkbox" checked={restartOnError} onChange={(e) => setRestartOnError(e.target.checked)} />
+                Restart buy/sell on error (disable for better performance)
+              </label>
+              <label className="flex items-center gap-2 text-xs text-white/70 py-1 cursor-pointer">
+                <input type="checkbox" checked={restartLast} onChange={(e) => setRestartLast(e.target.checked)} />
+                Restart last trade on error (bot ignores the unsuccessful trade)
+              </label>
 
-            {/* Run once at start */}
-            <div className="mt-3 border-t border-white/10 pt-3">
-              <div className="text-xs font-semibold mb-2">Run once at start:</div>
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5 flex-wrap text-xs bg-yellow-500/15 border border-yellow-500/30 rounded px-2 py-1.5 w-fit">
-                  <span className="text-yellow-300 font-semibold">print</span>
-                  <input
-                    value={startMsg}
-                    onChange={(e) => setStartMsg(e.target.value)}
-                    className="bg-white/10 rounded px-2 py-0.5 text-white text-xs min-w-[260px]"
-                  />
+              {/* Run once at start */}
+              <div className="mt-3 border-t border-white/10 pt-3">
+                <div className="text-xs font-semibold mb-2">Run once at start:</div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs bg-yellow-500/15 border border-yellow-500/30 rounded px-2 py-1.5 w-fit">
+                    <span className="text-yellow-300 font-semibold">print</span>
+                    <input
+                      value={startMsg}
+                      onChange={(e) => setStartMsg(e.target.value)}
+                      className="bg-white/10 rounded px-2 py-0.5 text-white text-xs min-w-[220px]"
+                    />
+                  </div>
+                  <VarRow name="Loss" value={lossLimit} onChange={setLossLimit} />
+                  <VarRow name="Target Profit" value={targetProfit} onChange={setTargetProfit} />
+                  <VarRow name="Stake" value={startStake} onChange={setStartStake} />
+                  <VarRow name="stake 2" value={stake2} onChange={setStake2} />
                 </div>
-                <VarRow name="Loss" value={lossLimit} onChange={setLossLimit} />
-                <VarRow name="Target Profit" value={targetProfit} onChange={setTargetProfit} />
-                <VarRow name="Stake" value={startStake} onChange={setStartStake} />
-                <VarRow name="stake 2" value={stake2} onChange={setStake2} />
               </div>
-            </div>
 
-            {/* Trade options */}
-            <div className="mt-3 border-t border-white/10 pt-3">
-              <div className="text-xs font-semibold mb-2">Trade options:</div>
-              <div className="flex items-center flex-wrap gap-1.5 text-xs">
-                <span className="text-white/80">Duration:</span>
-                <Select value={durationUnit} onChange={setDurationUnit} options={["Ticks", "Seconds", "Minutes", "Hours"]} />
-                <NumInput value={duration} onChange={setDuration} min={1} />
-                <span className="text-white/80 ml-2">Stake:</span>
-                <Select value={currency} onChange={setCurrency} options={["USD", "KES", "EUR", "GBP", "AUD"]} />
-                <NumInput value={stake} onChange={setStake} min={0.35} step={0.5} />
-                {isDigits && (
-                  <>
-                    <span className="text-white/80 ml-2">Prediction:</span>
-                    <NumInput value={prediction} onChange={(v) => setPrediction(Math.max(0, Math.min(9, Math.floor(v))))} min={0} step={1} />
-                  </>
-                )}
+              {/* Trade options */}
+              <div className="mt-3 border-t border-white/10 pt-3">
+                <div className="text-xs font-semibold mb-2">Trade options:</div>
+                <div className="flex items-center flex-wrap gap-1.5 text-xs">
+                  <span className="text-white/80">Duration:</span>
+                  <Select value={durationUnit} onChange={setDurationUnit} options={["Ticks", "Seconds", "Minutes", "Hours"]} />
+                  <NumInput value={duration} onChange={setDuration} min={1} />
+                  <span className="text-white/80 ml-2">Stake:</span>
+                  <Select value={currency} onChange={setCurrency} options={["USD", "KES", "EUR", "GBP", "AUD"]} />
+                  <NumInput value={stake} onChange={setStake} min={0.35} step={0.5} />
+                  {isDigits && (
+                    <>
+                      <span className="text-white/80 ml-2">Prediction:</span>
+                      <NumInput value={prediction} onChange={(v) => setPrediction(Math.max(0, Math.min(9, Math.floor(v))))} min={0} step={1} />
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </BlockGroup>
+            </BlockGroup>
 
-          {/* 2. Purchase conditions (expandable) */}
-          <div className="mb-4">
-            <button
-              onClick={() => setPurchaseOpen((o) => !o)}
-              className="w-full max-w-xl flex items-center justify-between gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-600 px-3 py-2 text-sm font-semibold"
-            >
-              <span className="inline-flex items-center gap-2">
-                {purchaseOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                2. Purchase conditions
-              </span>
-              <Plus className="w-4 h-4 opacity-70" />
-            </button>
-            {purchaseOpen && (
-              <div className="max-w-xl bg-blue-900/40 border border-blue-500/40 border-t-0 rounded-b-lg p-3 space-y-1">
-                <FieldRow label="Purchase">
-                  <Select value={purchase} onChange={setPurchase} options={PURCHASES} />
-                </FieldRow>
-                <div className="text-[11px] text-white/60">Bot will place a {purchase} order on {symbol}.</div>
-              </div>
-            )}
+            {/* 2. Purchase conditions (expandable) — beside Trade parameters */}
+            <div className="mb-4">
+              <button
+                onClick={() => setPurchaseOpen((o) => !o)}
+                className="w-full flex items-center justify-between gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-600 px-3 py-2 text-sm font-semibold"
+              >
+                <span className="inline-flex items-center gap-2">
+                  {purchaseOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  2. Purchase conditions
+                </span>
+                <Plus className="w-4 h-4 opacity-70" />
+              </button>
+              {purchaseOpen && (
+                <div className="bg-blue-900/40 border border-blue-500/40 border-t-0 rounded-b-lg p-3 space-y-1">
+                  <FieldRow label="Purchase">
+                    <Select value={purchase} onChange={setPurchase} options={PURCHASES} />
+                  </FieldRow>
+                  <div className="text-[11px] text-white/60">Bot will place a {purchase} order on {symbol}.</div>
+                </div>
+              )}
+            </div>
           </div>
+
 
           <BlockGroup title="3. Sell conditions" side>
             <div className="text-xs text-white/80">if <span className="px-2 py-0.5 rounded bg-white/10">Sell is available</span> then</div>
