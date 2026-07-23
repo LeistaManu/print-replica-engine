@@ -9,6 +9,11 @@ export const Route = createFileRoute("/app/analysis-tool")({
 
 const SUBTABS = ["Signals", "Analysis Tool", "DP Tools", "All Analysis", "Tick Analyser", "Xenon AI"];
 const MARKETS = [
+  "Volatility 10 Index",
+  "Volatility 25 Index",
+  "Volatility 50 Index",
+  "Volatility 75 Index",
+  "Volatility 100 Index",
   "Volatility 10 (1s) Index",
   "Volatility 25 (1s) Index",
   "Volatility 50 (1s) Index",
