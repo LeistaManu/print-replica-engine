@@ -4,29 +4,14 @@
 // automatically — no popup blockers, no orphan tabs.
 
 export const DERIV_APP_ID = "36300";
-const DERIV_OAUTH_BASE_URL = "https://oauth.deriv.com/oauth2/authorize";
-export const DERIV_RETURN_PATH = "/app/bot-builder";
-export const DERIV_OAUTH_URL = `${DERIV_OAUTH_BASE_URL}?app_id=${DERIV_APP_ID}`;
+export const DERIV_OAUTH_URL = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}`;
 export const DERIV_SIGNUP_URL = "https://track.deriv.com/_SBDSiGetH571hit6RV3zsGNd7ZgqdRLk/1/";
 export const DERIV_DEPOSIT_URL = "https://app.deriv.com/cashier/deposit";
 export const DERIV_WITHDRAW_URL = "https://app.deriv.com/cashier/withdrawal";
 export const SUPPORT_PHONE = "+254700210017";
 export const SUPPORT_PHONE_DISPLAY = "0700210017";
 
-const RETURN_TO = DERIV_RETURN_PATH;
-
-function getReturnUrl() {
-  if (typeof window === "undefined") return RETURN_TO;
-  return `${window.location.origin}${RETURN_TO}`;
-}
-
-function buildOAuthUrl(mode: "login" | "signup" = "login") {
-  const url = new URL(DERIV_OAUTH_BASE_URL);
-  url.searchParams.set("app_id", DERIV_APP_ID);
-  url.searchParams.set("redirect_uri", getReturnUrl());
-  if (mode === "signup") url.searchParams.set("prompt", "registration");
-  return url.toString();
-}
+const RETURN_TO = "/app/bot-builder";
 
 function sameTab(url: string) {
   if (typeof window === "undefined") return;
@@ -49,12 +34,12 @@ function openInNewTab(url: string) {
 
 export function handleLogin(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  sameTab(buildOAuthUrl("login"));
+  sameTab(DERIV_OAUTH_URL);
 }
 
 export function handleSignup(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  sameTab(buildOAuthUrl("signup"));
+  sameTab(DERIV_SIGNUP_URL);
 }
 
 export function handleDeposit(e?: { preventDefault?: () => void }) {

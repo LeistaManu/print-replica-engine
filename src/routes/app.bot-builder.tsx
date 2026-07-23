@@ -14,6 +14,11 @@ export const Route = createFileRoute("/app/bot-builder")({
 /* ---------- Blocks catalog ---------- */
 const BLOCKS: Record<string, string[]> = {
   "Trade parameters": ["Market", "Trade Type", "Contract Type", "Candle Interval", "Trade options"],
+  "Purchase conditions": ["Purchase Rise", "Purchase Fall", "Purchase Even", "Purchase Odd", "Purchase Higher", "Purchase Lower", "Purchase Over", "Purchase Under"],
+  "Sell conditions (optional)": ["Sell at market", "Sell if profit >", "Sell if loss >"],
+  "Restart trading conditions": ["Trade again", "Stop bot", "Restart after loss", "Restart after win"],
+  "Analysis": ["Last digit", "Moving average", "RSI", "Bollinger bands", "MACD"],
+  "Utility": ["Notify", "Log", "Delay", "Repeat", "Math", "Variable"],
 };
 
 /* Chained market selectors (like Deriv/dollarprinter) */
