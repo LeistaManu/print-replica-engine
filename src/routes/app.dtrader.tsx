@@ -67,6 +67,19 @@ function DTrader() {
   const timeStr = now.toISOString().slice(11, 19) + " GMT";
   const dateStr = now.toUTCString().slice(5, 16);
 
+  // Digit distribution for Even/Odd, Over/Under, Matches/Differs overlays
+  const showDigits = trade === "Even/Odd" || trade === "Over/Under" || trade === "Matches/Differs";
+  const digitCounts = Array(10).fill(0) as number[];
+  ticks.forEach((v) => {
+    const d = Math.abs(Math.round(v * 100)) % 10;
+    digitCounts[d] += 1;
+  });
+  const digitTotal = digitCounts.reduce((s, n) => s + n, 0) || 1;
+  const digitPct = digitCounts.map((c) => (c / digitTotal) * 100);
+  const maxPct = Math.max(...digitPct);
+  const minPct = Math.min(...digitPct);
+  const currentDigit = Math.abs(Math.round(price * 100)) % 10;
+
   return (
     <div className="grid grid-cols-12 gap-4">
       {/* Left: chart */}
@@ -155,6 +168,40 @@ function DTrader() {
               })}
             </g>
           </svg>
+
+          {showDigits && (
+            <div className="absolute bottom-12 left-0 right-0 flex items-end justify-center gap-2 md:gap-3 px-4 pointer-events-none">
+              {digitPct.map((pct, d) => {
+                const isCurrent = d === currentDigit;
+                const isMax = pct === maxPct;
+                const isMin = pct === minPct;
+                const ring = isMax
+                  ? "border-emerald-500 text-emerald-600"
+                  : isMin
+                    ? "border-red-500 text-red-600"
+                    : "border-slate-300 text-slate-700";
+                return (
+                  <div key={d} className="flex flex-col items-center">
+                    <div
+                      className={`relative w-9 h-9 md:w-11 md:h-11 rounded-full border-2 bg-white grid place-items-center ${ring} ${
+                        isCurrent ? "shadow-[0_0_0_3px_rgba(6,182,212,0.35)]" : ""
+                      }`}
+                    >
+                      <span className="text-xs md:text-sm font-bold leading-none">{d}</span>
+                      <span className="text-[9px] md:text-[10px] font-semibold leading-none mt-0.5">
+                        {pct.toFixed(1)}%
+                      </span>
+                    </div>
+                    {isCurrent && (
+                      <svg width="12" height="8" viewBox="0 0 12 8" className="mt-0.5">
+                        <polygon points="6,0 12,8 0,8" fill="#0f172a" />
+                      </svg>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="absolute bottom-2 left-3">
             <span className="inline-block bg-yellow-300 text-slate-900 text-xs font-bold px-3 py-1 rounded">Risk Disclaimer</span>
