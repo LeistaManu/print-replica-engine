@@ -222,40 +222,114 @@ function DTrader() {
         </div>
       </div>
 
-      {/* Right: trade panel */}
+      {/* Right: trade panel — content varies by trade type */}
       <div className="col-span-12 lg:col-span-3">
         <div className="rounded-xl bg-white text-slate-900 p-4 space-y-4 shadow">
-          <div className="flex items-center justify-between text-sm font-semibold">
-            <span>How to trade {trade}?</span>
-            <ChevronDown className="w-4 h-4 -rotate-90" />
-          </div>
+          {/* Top toggle: varies by trade type */}
+          {trade === "Even/Odd" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-full">
+              {(["Even", "Odd"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setEvenOdd(s)}
+                  className={`py-2 rounded-full text-sm font-bold transition ${
+                    evenOdd === s ? "bg-white text-emerald-600 shadow" : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
-            {(["Rise", "Fall"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSide(s)}
-                className={`py-2 rounded-md text-sm font-bold transition ${
-                  side === s
-                    ? s === "Rise"
-                      ? "bg-white text-emerald-600 shadow"
-                      : "bg-white text-red-600 shadow"
-                    : "text-slate-500"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          {trade === "Over/Under" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-full">
+              {(["Over", "Under"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setOverUnder(s)}
+                  className={`py-2 rounded-full text-sm font-bold transition ${
+                    overUnder === s ? "bg-white text-emerald-600 shadow" : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <label className="block border border-slate-200 rounded-lg p-3">
+          {trade === "Matches/Differs" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-full">
+              {(["Matches", "Differs"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setMatchDiffer(s)}
+                  className={`py-2 rounded-full text-sm font-bold transition ${
+                    matchDiffer === s ? "bg-white text-emerald-600 shadow" : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {trade === "Rise/Fall" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
+              {(["Rise", "Fall"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSide(s)}
+                  className={`py-2 rounded-md text-sm font-bold transition ${
+                    side === s
+                      ? s === "Rise" ? "bg-white text-emerald-600 shadow" : "bg-white text-red-600 shadow"
+                      : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Last digit prediction — Over/Under & Matches/Differs */}
+          {(trade === "Over/Under" || trade === "Matches/Differs") && (
+            <div className="rounded-lg bg-slate-50 p-3">
+              <div className="text-xs text-slate-500 mb-2">Last digit prediction</div>
+              <div className="grid grid-cols-5 gap-2">
+                {Array.from({ length: 10 }, (_, d) => {
+                  const pct = digitPct[d];
+                  const isMax = pct === maxPct;
+                  const isMin = pct === minPct;
+                  const selected = prediction === d;
+                  const pctColor = isMax ? "text-emerald-600" : isMin ? "text-red-600" : "text-slate-400";
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => setPrediction(d)}
+                      className="flex flex-col items-center gap-0.5"
+                    >
+                      <div className={`w-9 h-9 rounded-md grid place-items-center text-sm font-bold border transition ${
+                        selected ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-800 border-slate-200 hover:border-slate-400"
+                      }`}>
+                        {d}
+                      </div>
+                      <span className={`text-[10px] font-semibold ${pctColor}`}>{pct.toFixed(1)}%</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <label className="block bg-slate-50 rounded-lg p-3">
             <div className="text-xs text-slate-500">Duration</div>
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="number"
                 value={duration}
                 onChange={(e) => setDuration(+e.target.value)}
-                className="w-full text-lg font-semibold outline-none"
+                className="w-full text-lg font-semibold outline-none bg-transparent"
               />
               <select
                 value={durUnit}
@@ -268,32 +342,36 @@ function DTrader() {
             </div>
           </label>
 
-          <label className="block border border-slate-200 rounded-lg p-3">
+          <label className="block bg-slate-50 rounded-lg p-3">
             <div className="text-xs text-slate-500">Stake</div>
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="number"
                 value={stake}
                 onChange={(e) => setStake(+e.target.value)}
-                className="w-full text-lg font-semibold outline-none"
+                className="w-full text-lg font-semibold outline-none bg-transparent"
               />
               <span className="text-sm text-slate-500">USD</span>
             </div>
           </label>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm">Allow equals</span>
-            <button
-              onClick={() => setAllowEquals((v) => !v)}
-              className={`w-10 h-5 rounded-full transition relative ${allowEquals ? "bg-emerald-500" : "bg-slate-300"}`}
-            >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition ${allowEquals ? "left-5" : "left-0.5"}`} />
-            </button>
-          </div>
+          {trade === "Rise/Fall" && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Allow equals</span>
+              <button
+                onClick={() => setAllowEquals((v) => !v)}
+                className={`w-10 h-5 rounded-full transition relative ${allowEquals ? "bg-emerald-500" : "bg-slate-300"}`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition ${allowEquals ? "left-5" : "left-0.5"}`} />
+              </button>
+            </div>
+          )}
 
           <button
-            className={`w-full py-3 rounded-lg font-bold text-white ${
-              side === "Rise" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"
+            className={`w-full py-3 rounded-full font-bold text-white ${
+              trade === "Rise/Fall" && side === "Fall"
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-emerald-500 hover:bg-emerald-600"
             }`}
           >
             <div>Buy</div>
@@ -303,6 +381,7 @@ function DTrader() {
           <div className="text-[11px] text-slate-500 text-center">{dateStr} {timeStr}</div>
         </div>
       </div>
+
     </div>
   );
 }
