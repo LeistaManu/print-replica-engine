@@ -54,7 +54,7 @@ function openInNewTab(url: string) {
 
 export function handleLogin(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  sameTab(DERIV_OAUTH_URL);
+  sameTab(getDerivOAuthUrl());
 }
 
 export function handleSignup(e?: { preventDefault?: () => void }) {
