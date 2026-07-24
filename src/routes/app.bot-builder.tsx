@@ -637,9 +637,9 @@ function ToolBtn({ icon: I, title, onClick }: { icon: any; title: string; onClic
     </button>
   );
 }
-function BlockGroup({ title, children, side }: { title: string; children: React.ReactNode; side?: boolean }) {
+function BlockGroup({ title, children, side, full }: { title: string; children: React.ReactNode; side?: boolean; full?: boolean }) {
   return (
-    <div className={`mb-4 rounded-lg overflow-hidden border border-blue-500/40 ${side ? "ml-auto max-w-md" : "max-w-xl"}`}>
+    <div className={`mb-4 rounded-lg overflow-hidden border border-blue-500/40 ${full ? "" : side ? "ml-auto max-w-md" : "max-w-xl"}`}>
       <div className="bg-gradient-to-r from-blue-700 to-blue-600 px-3 py-2 text-sm font-semibold">{title}</div>
       <div className="bg-blue-900/40 p-3 space-y-1">{children}</div>
     </div>
