@@ -67,6 +67,19 @@ function DTrader() {
   const timeStr = now.toISOString().slice(11, 19) + " GMT";
   const dateStr = now.toUTCString().slice(5, 16);
 
+  // Digit distribution for Even/Odd, Over/Under, Matches/Differs overlays
+  const showDigits = trade === "Even/Odd" || trade === "Over/Under" || trade === "Matches/Differs";
+  const digitCounts = Array(10).fill(0) as number[];
+  ticks.forEach((v) => {
+    const d = Math.abs(Math.round(v * 100)) % 10;
+    digitCounts[d] += 1;
+  });
+  const digitTotal = digitCounts.reduce((s, n) => s + n, 0) || 1;
+  const digitPct = digitCounts.map((c) => (c / digitTotal) * 100);
+  const maxPct = Math.max(...digitPct);
+  const minPct = Math.min(...digitPct);
+  const currentDigit = Math.abs(Math.round(price * 100)) % 10;
+
   return (
     <div className="grid grid-cols-12 gap-4">
       {/* Left: chart */}
