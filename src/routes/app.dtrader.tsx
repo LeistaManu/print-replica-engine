@@ -36,14 +36,19 @@ function DTrader() {
   const [symbol, setSymbol] = useState("Volatility 100 (1s) Index");
   const [symOpen, setSymOpen] = useState(false);
   const [side, setSide] = useState<"Rise" | "Fall">("Rise");
+  const [evenOdd, setEvenOdd] = useState<"Even" | "Odd">("Even");
+  const [overUnder, setOverUnder] = useState<"Over" | "Under">("Over");
+  const [matchDiffer, setMatchDiffer] = useState<"Matches" | "Differs">("Matches");
+  const [prediction, setPrediction] = useState(6);
   const [duration, setDuration] = useState(5);
-  const [durUnit, setDurUnit] = useState<"ticks" | "min">("min");
+  const [durUnit, setDurUnit] = useState<"ticks" | "min">("ticks");
   const [stake, setStake] = useState(10);
   const [allowEquals, setAllowEquals] = useState(false);
   const [ticks, setTicks] = useState<number[]>(() =>
     Array.from({ length: 80 }, (_, i) => 905 + Math.sin(i / 5) * 1.2 + Math.random() * 0.6)
   );
   const priceRef = useRef(905);
+
 
   useEffect(() => {
     const id = setInterval(() => {
