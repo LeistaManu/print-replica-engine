@@ -175,25 +175,25 @@ function DTrader() {
                 const isCurrent = d === currentDigit;
                 const isMax = pct === maxPct;
                 const isMin = pct === minPct;
-                const ring = isMax
-                  ? "border-emerald-500 text-emerald-600"
+                const outer = isMax
+                  ? "bg-emerald-100 ring-2 ring-emerald-500"
                   : isMin
-                    ? "border-red-500 text-red-600"
-                    : "border-slate-300 text-slate-700";
+                    ? "bg-red-100 ring-2 ring-red-500"
+                    : "bg-slate-100 ring-2 ring-slate-300";
+                const text = isMax ? "text-emerald-700" : isMin ? "text-red-700" : "text-slate-700";
                 return (
                   <div key={d} className="flex flex-col items-center">
-                    <div
-                      className={`relative w-9 h-9 md:w-11 md:h-11 rounded-full border-2 bg-white grid place-items-center ${ring} ${
-                        isCurrent ? "shadow-[0_0_0_3px_rgba(6,182,212,0.35)]" : ""
-                      }`}
-                    >
-                      <span className="text-xs md:text-sm font-bold leading-none">{d}</span>
-                      <span className="text-[9px] md:text-[10px] font-semibold leading-none mt-0.5">
+                    {/* Outer visibility layer + inner digit chip = "second layer" */}
+                    <div className={`relative w-12 h-12 md:w-14 md:h-14 rounded-full ${outer} grid place-items-center shadow-md`}>
+                      <div className={`w-9 h-9 md:w-11 md:h-11 rounded-full bg-white border-2 border-slate-200 grid place-items-center ${isCurrent ? "shadow-[0_0_0_3px_rgba(6,182,212,0.55)] ring-2 ring-cyan-500" : ""}`}>
+                        <span className={`text-xs md:text-sm font-bold leading-none ${text}`}>{d}</span>
+                      </div>
+                      <span className={`absolute -bottom-4 text-[10px] md:text-[11px] font-semibold ${text}`}>
                         {pct.toFixed(1)}%
                       </span>
                     </div>
                     {isCurrent && (
-                      <svg width="12" height="8" viewBox="0 0 12 8" className="mt-0.5">
+                      <svg width="12" height="8" viewBox="0 0 12 8" className="mt-5">
                         <polygon points="6,0 12,8 0,8" fill="#0f172a" />
                       </svg>
                     )}
@@ -202,6 +202,7 @@ function DTrader() {
               })}
             </div>
           )}
+
 
           <div className="absolute bottom-2 left-3">
             <span className="inline-block bg-yellow-300 text-slate-900 text-xs font-bold px-3 py-1 rounded">Risk Disclaimer</span>
