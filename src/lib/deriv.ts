@@ -5,8 +5,8 @@
 
 export const DERIV_APP_ID = "36300";
 export const DERIV_API_TOKEN = "pat_0b94666ffc899f84515febbc1ec5ddbd58d25e5e6f6803fadf7de73d812aa93e";
-export const DERIV_REDIRECT_URI = "https://digitoolderivtrader.vercel.app/app/dashboard";
-export const DERIV_OAUTH_URL = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=EN&brand=deriv&redirect_uri=${encodeURIComponent(DERIV_REDIRECT_URI)}`;
+// Fallback redirect target when running server-side / SSR (no window).
+export const DERIV_REDIRECT_URI_FALLBACK = "https://digitoolderivtrader.vercel.app/app/dashboard";
 export const DERIV_SIGNUP_URL = "https://partner-tracking.deriv.com/click?a=26457&o=1&c=3&link_id=1";
 export const DERIV_DEPOSIT_URL = "https://app.deriv.com/cashier/deposit";
 export const DERIV_WITHDRAW_URL = "https://app.deriv.com/cashier/withdrawal";
@@ -14,6 +14,24 @@ export const SUPPORT_PHONE = "+254700210017";
 export const SUPPORT_PHONE_DISPLAY = "0700210017";
 
 const RETURN_TO = "/app/dashboard";
+
+// Build the redirect URI dynamically at call time from the current origin so
+// Deriv sends the user back to the SAME site they logged in from. Using a
+// hardcoded external URL (e.g. the Vercel domain) makes login appear broken
+// on every other origin (preview, published, custom domain).
+function buildRedirectUri(): string {
+  if (typeof window === "undefined") return DERIV_REDIRECT_URI_FALLBACK;
+  return `${window.location.origin}${RETURN_TO}`;
+}
+
+export function getDerivOAuthUrl(): string {
+  const redirect = buildRedirectUri();
+  return `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=EN&brand=deriv&redirect_uri=${encodeURIComponent(redirect)}`;
+}
+
+// Back-compat export: some modules import this constant directly.
+export const DERIV_OAUTH_URL = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=EN&brand=deriv&redirect_uri=${encodeURIComponent(DERIV_REDIRECT_URI_FALLBACK)}`;
+export const DERIV_REDIRECT_URI = DERIV_REDIRECT_URI_FALLBACK;
 
 function sameTab(url: string) {
   if (typeof window === "undefined") return;
@@ -36,7 +54,7 @@ function openInNewTab(url: string) {
 
 export function handleLogin(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  sameTab(DERIV_OAUTH_URL);
+  sameTab(getDerivOAuthUrl());
 }
 
 export function handleSignup(e?: { preventDefault?: () => void }) {

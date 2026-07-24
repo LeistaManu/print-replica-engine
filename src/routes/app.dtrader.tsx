@@ -36,14 +36,19 @@ function DTrader() {
   const [symbol, setSymbol] = useState("Volatility 100 (1s) Index");
   const [symOpen, setSymOpen] = useState(false);
   const [side, setSide] = useState<"Rise" | "Fall">("Rise");
+  const [evenOdd, setEvenOdd] = useState<"Even" | "Odd">("Even");
+  const [overUnder, setOverUnder] = useState<"Over" | "Under">("Over");
+  const [matchDiffer, setMatchDiffer] = useState<"Matches" | "Differs">("Matches");
+  const [prediction, setPrediction] = useState(6);
   const [duration, setDuration] = useState(5);
-  const [durUnit, setDurUnit] = useState<"ticks" | "min">("min");
+  const [durUnit, setDurUnit] = useState<"ticks" | "min">("ticks");
   const [stake, setStake] = useState(10);
   const [allowEquals, setAllowEquals] = useState(false);
   const [ticks, setTicks] = useState<number[]>(() =>
     Array.from({ length: 80 }, (_, i) => 905 + Math.sin(i / 5) * 1.2 + Math.random() * 0.6)
   );
   const priceRef = useRef(905);
+
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -175,25 +180,25 @@ function DTrader() {
                 const isCurrent = d === currentDigit;
                 const isMax = pct === maxPct;
                 const isMin = pct === minPct;
-                const ring = isMax
-                  ? "border-emerald-500 text-emerald-600"
+                const outer = isMax
+                  ? "bg-emerald-100 ring-2 ring-emerald-500"
                   : isMin
-                    ? "border-red-500 text-red-600"
-                    : "border-slate-300 text-slate-700";
+                    ? "bg-red-100 ring-2 ring-red-500"
+                    : "bg-slate-100 ring-2 ring-slate-300";
+                const text = isMax ? "text-emerald-700" : isMin ? "text-red-700" : "text-slate-700";
                 return (
                   <div key={d} className="flex flex-col items-center">
-                    <div
-                      className={`relative w-9 h-9 md:w-11 md:h-11 rounded-full border-2 bg-white grid place-items-center ${ring} ${
-                        isCurrent ? "shadow-[0_0_0_3px_rgba(6,182,212,0.35)]" : ""
-                      }`}
-                    >
-                      <span className="text-xs md:text-sm font-bold leading-none">{d}</span>
-                      <span className="text-[9px] md:text-[10px] font-semibold leading-none mt-0.5">
+                    {/* Outer visibility layer + inner digit chip = "second layer" */}
+                    <div className={`relative w-12 h-12 md:w-14 md:h-14 rounded-full ${outer} grid place-items-center shadow-md`}>
+                      <div className={`w-9 h-9 md:w-11 md:h-11 rounded-full bg-white border-2 border-slate-200 grid place-items-center ${isCurrent ? "shadow-[0_0_0_3px_rgba(6,182,212,0.55)] ring-2 ring-cyan-500" : ""}`}>
+                        <span className={`text-xs md:text-sm font-bold leading-none ${text}`}>{d}</span>
+                      </div>
+                      <span className={`absolute -bottom-4 text-[10px] md:text-[11px] font-semibold ${text}`}>
                         {pct.toFixed(1)}%
                       </span>
                     </div>
                     {isCurrent && (
-                      <svg width="12" height="8" viewBox="0 0 12 8" className="mt-0.5">
+                      <svg width="12" height="8" viewBox="0 0 12 8" className="mt-5">
                         <polygon points="6,0 12,8 0,8" fill="#0f172a" />
                       </svg>
                     )}
@@ -202,6 +207,7 @@ function DTrader() {
               })}
             </div>
           )}
+
 
           <div className="absolute bottom-2 left-3">
             <span className="inline-block bg-yellow-300 text-slate-900 text-xs font-bold px-3 py-1 rounded">Risk Disclaimer</span>
@@ -216,40 +222,114 @@ function DTrader() {
         </div>
       </div>
 
-      {/* Right: trade panel */}
+      {/* Right: trade panel — content varies by trade type */}
       <div className="col-span-12 lg:col-span-3">
         <div className="rounded-xl bg-white text-slate-900 p-4 space-y-4 shadow">
-          <div className="flex items-center justify-between text-sm font-semibold">
-            <span>How to trade {trade}?</span>
-            <ChevronDown className="w-4 h-4 -rotate-90" />
-          </div>
+          {/* Top toggle: varies by trade type */}
+          {trade === "Even/Odd" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-full">
+              {(["Even", "Odd"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setEvenOdd(s)}
+                  className={`py-2 rounded-full text-sm font-bold transition ${
+                    evenOdd === s ? "bg-white text-emerald-600 shadow" : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
-            {(["Rise", "Fall"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSide(s)}
-                className={`py-2 rounded-md text-sm font-bold transition ${
-                  side === s
-                    ? s === "Rise"
-                      ? "bg-white text-emerald-600 shadow"
-                      : "bg-white text-red-600 shadow"
-                    : "text-slate-500"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          {trade === "Over/Under" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-full">
+              {(["Over", "Under"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setOverUnder(s)}
+                  className={`py-2 rounded-full text-sm font-bold transition ${
+                    overUnder === s ? "bg-white text-emerald-600 shadow" : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <label className="block border border-slate-200 rounded-lg p-3">
+          {trade === "Matches/Differs" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-full">
+              {(["Matches", "Differs"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setMatchDiffer(s)}
+                  className={`py-2 rounded-full text-sm font-bold transition ${
+                    matchDiffer === s ? "bg-white text-emerald-600 shadow" : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {trade === "Rise/Fall" && (
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
+              {(["Rise", "Fall"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSide(s)}
+                  className={`py-2 rounded-md text-sm font-bold transition ${
+                    side === s
+                      ? s === "Rise" ? "bg-white text-emerald-600 shadow" : "bg-white text-red-600 shadow"
+                      : "text-slate-500"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Last digit prediction — Over/Under & Matches/Differs */}
+          {(trade === "Over/Under" || trade === "Matches/Differs") && (
+            <div className="rounded-lg bg-slate-50 p-3">
+              <div className="text-xs text-slate-500 mb-2">Last digit prediction</div>
+              <div className="grid grid-cols-5 gap-2">
+                {Array.from({ length: 10 }, (_, d) => {
+                  const pct = digitPct[d];
+                  const isMax = pct === maxPct;
+                  const isMin = pct === minPct;
+                  const selected = prediction === d;
+                  const pctColor = isMax ? "text-emerald-600" : isMin ? "text-red-600" : "text-slate-400";
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => setPrediction(d)}
+                      className="flex flex-col items-center gap-0.5"
+                    >
+                      <div className={`w-9 h-9 rounded-md grid place-items-center text-sm font-bold border transition ${
+                        selected ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-800 border-slate-200 hover:border-slate-400"
+                      }`}>
+                        {d}
+                      </div>
+                      <span className={`text-[10px] font-semibold ${pctColor}`}>{pct.toFixed(1)}%</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <label className="block bg-slate-50 rounded-lg p-3">
             <div className="text-xs text-slate-500">Duration</div>
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="number"
                 value={duration}
                 onChange={(e) => setDuration(+e.target.value)}
-                className="w-full text-lg font-semibold outline-none"
+                className="w-full text-lg font-semibold outline-none bg-transparent"
               />
               <select
                 value={durUnit}
@@ -262,32 +342,36 @@ function DTrader() {
             </div>
           </label>
 
-          <label className="block border border-slate-200 rounded-lg p-3">
+          <label className="block bg-slate-50 rounded-lg p-3">
             <div className="text-xs text-slate-500">Stake</div>
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="number"
                 value={stake}
                 onChange={(e) => setStake(+e.target.value)}
-                className="w-full text-lg font-semibold outline-none"
+                className="w-full text-lg font-semibold outline-none bg-transparent"
               />
               <span className="text-sm text-slate-500">USD</span>
             </div>
           </label>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm">Allow equals</span>
-            <button
-              onClick={() => setAllowEquals((v) => !v)}
-              className={`w-10 h-5 rounded-full transition relative ${allowEquals ? "bg-emerald-500" : "bg-slate-300"}`}
-            >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition ${allowEquals ? "left-5" : "left-0.5"}`} />
-            </button>
-          </div>
+          {trade === "Rise/Fall" && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Allow equals</span>
+              <button
+                onClick={() => setAllowEquals((v) => !v)}
+                className={`w-10 h-5 rounded-full transition relative ${allowEquals ? "bg-emerald-500" : "bg-slate-300"}`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition ${allowEquals ? "left-5" : "left-0.5"}`} />
+              </button>
+            </div>
+          )}
 
           <button
-            className={`w-full py-3 rounded-lg font-bold text-white ${
-              side === "Rise" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"
+            className={`w-full py-3 rounded-full font-bold text-white ${
+              trade === "Rise/Fall" && side === "Fall"
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-emerald-500 hover:bg-emerald-600"
             }`}
           >
             <div>Buy</div>
@@ -297,6 +381,7 @@ function DTrader() {
           <div className="text-[11px] text-slate-500 text-center">{dateStr} {timeStr}</div>
         </div>
       </div>
+
     </div>
   );
 }
