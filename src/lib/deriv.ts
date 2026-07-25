@@ -3,10 +3,10 @@
 // dollarprinter.com) so Deriv's OAuth return sends the user back to our site
 // automatically — no popup blockers, no orphan tabs.
 
-export const DERIV_APP_ID = "36300";
-export const DERIV_API_TOKEN = "pat_0b94666ffc899f84515febbc1ec5ddbd58d25e5e6f6803fadf7de73d812aa93e";
+export const DERIV_APP_ID = "33Vxdb9YF1exXgyW3vms1";
+export const DERIV_API_TOKEN = "pat_a7ebbd38e1be1bb0e32a14e6b42935c521d6afd8a99a1183ea411032620245a7";
 // Fallback redirect target when running server-side / SSR (no window).
-export const DERIV_REDIRECT_URI_FALLBACK = "https://digitoolderivtrader.vercel.app/app/dashboard";
+export const DERIV_REDIRECT_URI_FALLBACK = "https://digitoolderiv.site/dashboard";
 export const DERIV_SIGNUP_URL = "https://partner-tracking.deriv.com/click?a=26457&o=1&c=3&link_id=1";
 export const DERIV_DEPOSIT_URL = "https://app.deriv.com/cashier/deposit";
 export const DERIV_WITHDRAW_URL = "https://app.deriv.com/cashier/withdrawal";
