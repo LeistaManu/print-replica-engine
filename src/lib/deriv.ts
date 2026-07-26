@@ -6,7 +6,7 @@
 export const DERIV_APP_ID = "33Vxdb9YF1exXgyW3vms1";
 export const DERIV_API_TOKEN = "pat_a7ebbd38e1be1bb0e32a14e6b42935c521d6afd8a99a1183ea411032620245a7";
 // Fallback redirect target when running server-side / SSR (no window).
-export const DERIV_REDIRECT_URI_FALLBACK = "https://digittoolderiv.site/dashboard";
+export const DERIV_REDIRECT_URI_FALLBACK = "https://digittoolderiv.site/app/dashboard";
 export const DERIV_SIGNUP_URL = "https://partner-tracking.deriv.com/click?a=26457&o=1&c=3&link_id=1";
 export const DERIV_DEPOSIT_URL = "https://app.deriv.com/cashier/deposit";
 export const DERIV_WITHDRAW_URL = "https://app.deriv.com/cashier/withdrawal";
