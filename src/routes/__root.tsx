@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { DerivProvider } from "../context/DerivProvider";
 
 function NotFoundComponent() {
   return (
@@ -119,48 +120,12 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  // Global Deriv OAuth callback handler. Deriv may redirect back to ANY URL
-  // on our domain with ?acct1=&token1=&cur1=…, so intercept it here (not just
-  // on "/") and forward the user straight into the workspace. Persist the
-  // returned tokens/accounts to localStorage so the app can display balances.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const qs = new URLSearchParams(window.location.search);
-      const hasOAuth = qs.has("acct1") || qs.has("token1") || qs.has("code");
-      const flagged = !!sessionStorage.getItem("digittool.postAuthReturn");
-      if (!hasOAuth && !flagged) return;
-
-      if (hasOAuth) {
-        const accounts: Array<{ acct: string; token: string; cur: string }> = [];
-        for (let i = 1; ; i++) {
-          const acct = qs.get(`acct${i}`);
-          const token = qs.get(`token${i}`);
-          const cur = qs.get(`cur${i}`) ?? "";
-          if (!acct || !token) break;
-          accounts.push({ acct, token, cur });
-        }
-        if (accounts.length) {
-          localStorage.setItem("digittool.derivAccounts", JSON.stringify(accounts));
-          localStorage.setItem("digittool.derivActive", accounts[0].acct);
-          localStorage.setItem("digittool.derivToken", accounts[0].token);
-        }
-      }
-
-      const returnTo = sessionStorage.getItem("digittool.postAuthReturn") || "/app/bot-builder";
-      sessionStorage.removeItem("digittool.postAuthReturn");
-      // Strip OAuth params from the URL then navigate to the return target.
-      window.history.replaceState({}, "", window.location.pathname);
-      if (window.location.pathname !== returnTo) {
-        window.location.replace(returnTo);
-      }
-    } catch {}
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <DerivProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </DerivProvider>
     </QueryClientProvider>
   );
 }

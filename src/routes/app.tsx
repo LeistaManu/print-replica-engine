@@ -1,7 +1,8 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Blocks, LineChart, Bot, Layers, Activity, FileBarChart, Calculator, Copy, TrendingUp, Phone, LogIn, UserPlus, FileText, Wallet, X, ArrowDownCircle, ArrowUpCircle, CandlestickChart } from "lucide-react";
+import { LayoutDashboard, Blocks, LineChart, Bot, Layers, Activity, FileBarChart, Calculator, Copy, TrendingUp, Phone, LogIn, UserPlus, FileText, Wallet, X, ArrowDownCircle, ArrowUpCircle, CandlestickChart, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { DollarRain } from "@/components/DollarRain";
+import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { handleLogin, handleSignup, handleDeposit, handleWithdraw, SUPPORT_PHONE, SUPPORT_PHONE_DISPLAY } from "@/lib/deriv";
 
 export const Route = createFileRoute("/app")({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/app")({
 
 const nav = [
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/app/portfolio", label: "Portfolio", icon: Briefcase },
   { to: "/app/bot-builder", label: "Bot Builder", icon: Blocks },
   { to: "/app/charts", label: "Charts", icon: LineChart },
   { to: "/app/trading-bots", label: "Trading Bots", icon: Bot },
@@ -60,17 +62,7 @@ function AppLayout() {
             >
               {isDeposit ? "Deposit" : "Withdraw"}
             </button>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 grid place-items-center text-[10px] font-black text-slate-900">D</span>
-              <span className="font-bold tabular-nums">{balance}</span>
-              <button
-                onClick={() => setCurrency((c) => (c === "KES" ? "USD" : "KES"))}
-                className="text-white/50 hover:text-white text-xs"
-                title="Switch currency"
-              >
-                ▾
-              </button>
-            </div>
+            <AccountSwitcher />
           </div>
         </div>
       </div>

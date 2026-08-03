@@ -1,17 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TrendingUp, TrendingDown, DollarSign, Activity, Bot, Users, Wallet, Award } from "lucide-react";
+import { useDeriv } from "@/context/DerivProvider";
+import { formatMoney } from "@/lib/deriv-api";
 
 export const Route = createFileRoute("/app/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Digittool" }] }),
   component: Dashboard,
 });
 
-const kpis = [
-  { label: "Total Balance", value: "$12,847.32", change: "+8.4%", up: true, icon: Wallet },
-  { label: "Total Profit", value: "$3,215.90", change: "+12.7%", up: true, icon: DollarSign },
-  { label: "Active Bots", value: "6", change: "2 running", up: true, icon: Bot },
-  { label: "Win Rate", value: "68.4%", change: "-1.2%", up: false, icon: Activity },
-];
+
 
 const activity = [
   { time: "2m ago", pair: "EUR/USD", type: "BUY", amount: "$120.00", pnl: "+$14.20", up: true },
@@ -23,6 +20,45 @@ const activity = [
 ];
 
 function Dashboard() {
+  const {
+    isLoggedIn,
+    loading,
+    error,
+    balance,
+    currency,
+    isDemo,
+    loginid,
+    demoBalance,
+    realBalance,
+    login,
+    deposit,
+  } = useDeriv();
+
+  const kpis = [
+    {
+      label: isLoggedIn ? `${isDemo ? "Demo" : "Real"} Balance (${loginid ?? "—"})` : "Total Balance",
+      value: isLoggedIn ? formatMoney(balance, currency) : "—",
+      change: isLoggedIn ? (loading ? "syncing…" : "live") : "sign in to sync",
+      up: true,
+      icon: Wallet,
+    },
+    {
+      label: "Real Account",
+      value: realBalance ? formatMoney(realBalance.balance, realBalance.currency) : "—",
+      change: realBalance ? realBalance.loginid : "not available",
+      up: true,
+      icon: DollarSign,
+    },
+    {
+      label: "Demo Account",
+      value: demoBalance ? formatMoney(demoBalance.balance, demoBalance.currency) : "—",
+      change: demoBalance ? demoBalance.loginid : "not available",
+      up: true,
+      icon: Bot,
+    },
+    { label: "Win Rate", value: "68.4%", change: "-1.2%", up: false, icon: Activity },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -31,10 +67,17 @@ function Dashboard() {
           <p className="text-white/60 text-sm">Here's what's happening across your accounts today.</p>
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">Deposit</button>
+          <button onClick={() => (isLoggedIn ? void deposit() : login("/app/dashboard"))} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">
+            {isLoggedIn ? "Deposit" : "Log in with Deriv"}
+          </button>
+          <Link to="/app/portfolio" className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">Portfolio</Link>
           <button className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold text-sm">New Bot</button>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((k) => {
