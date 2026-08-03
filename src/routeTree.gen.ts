@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AppTradingViewRouteImport } from './routes/app.trading-view'
 import { Route as AppTradingBotsRouteImport } from './routes/app.trading-bots'
 import { Route as AppRiskCalculatorRouteImport } from './routes/app.risk-calculator'
 import { Route as AppReportsRouteImport } from './routes/app.reports'
+import { Route as AppPortfolioRouteImport } from './routes/app.portfolio'
 import { Route as AppDtraderRouteImport } from './routes/app.dtrader'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppCopyTradingRouteImport } from './routes/app.copy-trading'
@@ -23,6 +25,7 @@ import { Route as AppChartsRouteImport } from './routes/app.charts'
 import { Route as AppBulkTraderRouteImport } from './routes/app.bulk-trader'
 import { Route as AppBotBuilderRouteImport } from './routes/app.bot-builder'
 import { Route as AppAnalysisToolRouteImport } from './routes/app.analysis-tool'
+import { Route as ApiAuthDerivRouteImport } from './routes/api/auth/deriv'
 
 const AppRoute = AppRouteImport.update({
   id: '/app',
@@ -38,6 +41,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppTradingViewRoute = AppTradingViewRouteImport.update({
   id: '/trading-view',
@@ -57,6 +65,11 @@ const AppRiskCalculatorRoute = AppRiskCalculatorRouteImport.update({
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPortfolioRoute = AppPortfolioRouteImport.update({
+  id: '/portfolio',
+  path: '/portfolio',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDtraderRoute = AppDtraderRouteImport.update({
@@ -94,6 +107,11 @@ const AppAnalysisToolRoute = AppAnalysisToolRouteImport.update({
   path: '/analysis-tool',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiAuthDerivRoute = ApiAuthDerivRouteImport.update({
+  id: '/api/auth/deriv',
+  path: '/api/auth/deriv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -105,11 +123,14 @@ export interface FileRoutesByFullPath {
   '/app/copy-trading': typeof AppCopyTradingRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/dtrader': typeof AppDtraderRoute
+  '/app/portfolio': typeof AppPortfolioRoute
   '/app/reports': typeof AppReportsRoute
   '/app/risk-calculator': typeof AppRiskCalculatorRoute
   '/app/trading-bots': typeof AppTradingBotsRoute
   '/app/trading-view': typeof AppTradingViewRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/app/': typeof AppIndexRoute
+  '/api/auth/deriv': typeof ApiAuthDerivRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -120,11 +141,14 @@ export interface FileRoutesByTo {
   '/app/copy-trading': typeof AppCopyTradingRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/dtrader': typeof AppDtraderRoute
+  '/app/portfolio': typeof AppPortfolioRoute
   '/app/reports': typeof AppReportsRoute
   '/app/risk-calculator': typeof AppRiskCalculatorRoute
   '/app/trading-bots': typeof AppTradingBotsRoute
   '/app/trading-view': typeof AppTradingViewRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/app': typeof AppIndexRoute
+  '/api/auth/deriv': typeof ApiAuthDerivRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -137,11 +161,14 @@ export interface FileRoutesById {
   '/app/copy-trading': typeof AppCopyTradingRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/dtrader': typeof AppDtraderRoute
+  '/app/portfolio': typeof AppPortfolioRoute
   '/app/reports': typeof AppReportsRoute
   '/app/risk-calculator': typeof AppRiskCalculatorRoute
   '/app/trading-bots': typeof AppTradingBotsRoute
   '/app/trading-view': typeof AppTradingViewRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/app/': typeof AppIndexRoute
+  '/api/auth/deriv': typeof ApiAuthDerivRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -155,11 +182,14 @@ export interface FileRouteTypes {
     | '/app/copy-trading'
     | '/app/dashboard'
     | '/app/dtrader'
+    | '/app/portfolio'
     | '/app/reports'
     | '/app/risk-calculator'
     | '/app/trading-bots'
     | '/app/trading-view'
+    | '/auth/callback'
     | '/app/'
+    | '/api/auth/deriv'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -170,11 +200,14 @@ export interface FileRouteTypes {
     | '/app/copy-trading'
     | '/app/dashboard'
     | '/app/dtrader'
+    | '/app/portfolio'
     | '/app/reports'
     | '/app/risk-calculator'
     | '/app/trading-bots'
     | '/app/trading-view'
+    | '/auth/callback'
     | '/app'
+    | '/api/auth/deriv'
   id:
     | '__root__'
     | '/'
@@ -186,16 +219,21 @@ export interface FileRouteTypes {
     | '/app/copy-trading'
     | '/app/dashboard'
     | '/app/dtrader'
+    | '/app/portfolio'
     | '/app/reports'
     | '/app/risk-calculator'
     | '/app/trading-bots'
     | '/app/trading-view'
+    | '/auth/callback'
     | '/app/'
+    | '/api/auth/deriv'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  ApiAuthDerivRoute: typeof ApiAuthDerivRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -220,6 +258,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/trading-view': {
       id: '/app/trading-view'
@@ -247,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/app/reports'
       preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/portfolio': {
+      id: '/app/portfolio'
+      path: '/portfolio'
+      fullPath: '/app/portfolio'
+      preLoaderRoute: typeof AppPortfolioRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/dtrader': {
@@ -298,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalysisToolRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/auth/deriv': {
+      id: '/api/auth/deriv'
+      path: '/api/auth/deriv'
+      fullPath: '/api/auth/deriv'
+      preLoaderRoute: typeof ApiAuthDerivRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -309,6 +368,7 @@ interface AppRouteChildren {
   AppCopyTradingRoute: typeof AppCopyTradingRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDtraderRoute: typeof AppDtraderRoute
+  AppPortfolioRoute: typeof AppPortfolioRoute
   AppReportsRoute: typeof AppReportsRoute
   AppRiskCalculatorRoute: typeof AppRiskCalculatorRoute
   AppTradingBotsRoute: typeof AppTradingBotsRoute
@@ -324,6 +384,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCopyTradingRoute: AppCopyTradingRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDtraderRoute: AppDtraderRoute,
+  AppPortfolioRoute: AppPortfolioRoute,
   AppReportsRoute: AppReportsRoute,
   AppRiskCalculatorRoute: AppRiskCalculatorRoute,
   AppTradingBotsRoute: AppTradingBotsRoute,
@@ -336,6 +397,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  AuthCallbackRoute: AuthCallbackRoute,
+  ApiAuthDerivRoute: ApiAuthDerivRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
