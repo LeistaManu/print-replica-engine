@@ -39,11 +39,25 @@ class DerivSocket {
   private retries = 0;
   private closedByUs = false;
   private statusListeners = new Set<(s: "open" | "closed" | "connecting") => void>();
+  private reauthListeners = new Set<() => void>();
+  private authErrorListeners = new Set<(e: DerivApiError) => void>();
   private keepAlive: ReturnType<typeof setInterval> | null = null;
 
   onStatus(fn: (s: "open" | "closed" | "connecting") => void) {
     this.statusListeners.add(fn);
     return () => this.statusListeners.delete(fn);
+  }
+
+  /** Fired every time the socket (re)connects AND re-authorizes successfully. */
+  onReauthorize(fn: () => void) {
+    this.reauthListeners.add(fn);
+    return () => this.reauthListeners.delete(fn);
+  }
+
+  /** Fired when re-authorization fails (expired / invalid token). */
+  onAuthError(fn: (e: DerivApiError) => void) {
+    this.authErrorListeners.add(fn);
+    return () => this.authErrorListeners.delete(fn);
   }
 
   private emitStatus(s: "open" | "closed" | "connecting") {
@@ -65,11 +79,21 @@ class DerivSocket {
     this.ws = ws;
 
     ws.onopen = () => {
+      const firstConnect = this.retries === 0 && !this.hasConnectedOnce;
+      this.hasConnectedOnce = true;
       this.retries = 0;
       this.emitStatus("open");
       // Re-authorize first so queued authenticated calls succeed.
       if (this.token) {
-        ws.send(JSON.stringify({ authorize: this.token, req_id: this.nextId() }));
+        this.send({ authorize: this.token })
+          .then(() => {
+            if (!firstConnect) this.reauthListeners.forEach((fn) => fn());
+          })
+          .catch((e) => {
+            const err =
+              e instanceof DerivApiError ? e : new DerivApiError("authorize_failed", String(e));
+            this.authErrorListeners.forEach((fn) => fn(err));
+          });
       }
       const queued = this.queue.splice(0);
       queued.forEach((msg) => ws.send(msg));
