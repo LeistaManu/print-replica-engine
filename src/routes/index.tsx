@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Zap, Check, Star, Bot, BarChart3, Users, Shield, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { handleLogin, handleSignup } from "@/lib/deriv";
+import { useDeriv } from "@/context/DerivProvider";
+import { AccountSwitcher } from "@/components/AccountSwitcher";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -99,13 +101,25 @@ function LandingPage() {
           <span className="text-gradient-brand">Digit</span>
           <span className="text-foreground/90">tool</span>
         </div>
-        <a
-          href="#login"
-          onClick={handleLogin}
-          className="inline-flex items-center gap-2 rounded-full bg-background border border-border px-5 py-2.5 text-sm font-semibold hover:bg-secondary hover:scale-105 transition-all duration-300 animate-fade-up"
-        >
-          Login Now <ArrowRight className="h-4 w-4" />
-        </a>
+        {isAuthenticated ? (
+          <div className="flex items-center gap-2 animate-fade-up">
+            <Link
+              to="/app/dashboard"
+              className="hidden sm:inline-flex items-center gap-2 rounded-full bg-background border border-border px-5 py-2.5 text-sm font-semibold hover:bg-secondary transition-all"
+            >
+              Dashboard <ArrowRight className="h-4 w-4" />
+            </Link>
+            <AccountSwitcher />
+          </div>
+        ) : (
+          <a
+            href="#login"
+            onClick={handleLogin}
+            className="inline-flex items-center gap-2 rounded-full bg-background border border-border px-5 py-2.5 text-sm font-semibold hover:bg-secondary hover:scale-105 transition-all duration-300 animate-fade-up"
+          >
+            Login Now <ArrowRight className="h-4 w-4" />
+          </a>
+        )}
 
       </nav>
 
@@ -131,20 +145,24 @@ function LandingPage() {
           >
             Start Trading Now <ArrowRight className="h-4 w-4" />
           </Link>
-          <a
-            href="#login"
-            onClick={handleLogin}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-8 py-3 text-sm font-semibold text-background hover:opacity-95 hover:scale-105 transition-all duration-300"
-          >
-            Old Account Login
-          </a>
-          <a
-            href="#signup"
-            onClick={handleSignup}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-3 text-sm font-semibold hover:opacity-95 hover:scale-105 transition-all duration-300"
-          >
-            Sign Up
-          </a>
+          {!isAuthenticated && (
+            <>
+              <a
+                href="#login"
+                onClick={handleLogin}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-8 py-3 text-sm font-semibold text-background hover:opacity-95 hover:scale-105 transition-all duration-300"
+              >
+                Old Account Login
+              </a>
+              <a
+                href="#signup"
+                onClick={handleSignup}
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-3 text-sm font-semibold hover:opacity-95 hover:scale-105 transition-all duration-300"
+              >
+                Sign Up
+              </a>
+            </>
+          )}
         </div>
 
 
