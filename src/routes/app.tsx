@@ -3,7 +3,9 @@ import { LayoutDashboard, Blocks, LineChart, Bot, Layers, Activity, FileBarChart
 import { useState } from "react";
 import { DollarRain } from "@/components/DollarRain";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
-import { handleLogin, handleSignup, handleDeposit, handleWithdraw, SUPPORT_PHONE, SUPPORT_PHONE_DISPLAY } from "@/lib/deriv";
+import { handleLogin, handleSignup, SUPPORT_PHONE, SUPPORT_PHONE_DISPLAY } from "@/lib/deriv";
+import { useDeriv } from "@/context/DerivProvider";
+import { formatMoney } from "@/lib/deriv-api";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -34,9 +36,19 @@ function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [showMarquee, setShowMarquee] = useState(true);
   const [showCashier, setShowCashier] = useState(false);
-  const [currency, setCurrency] = useState<"KES" | "USD">("KES");
-  const balance = currency === "KES" ? "1,293,024.34 KES" : "9,987.42 USD";
-  const isDeposit = currency === "KES"; // toggle deposit/withdraw look like the ref
+  const {
+    isAuthenticated,
+    status,
+    balance: liveBalance,
+    currency: liveCurrency,
+    error,
+    deposit,
+    withdraw,
+  } = useDeriv();
+  const handleDeposit = () => void deposit();
+  const handleWithdraw = () => void withdraw();
+  const balance =
+    status === "ready" ? formatMoney(liveBalance, liveCurrency) : "Loading balance…";
 
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white">
@@ -54,18 +66,32 @@ function AppLayout() {
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={isDeposit ? handleDeposit : handleWithdraw}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-md ${
-                isDeposit ? "bg-purple-500 hover:bg-purple-400 text-white" : "bg-purple-300 hover:bg-purple-200 text-purple-900"
-              }`}
-            >
-              {isDeposit ? "Deposit" : "Withdraw"}
-            </button>
+            {isAuthenticated && (
+              <>
+                <button
+                  onClick={handleDeposit}
+                  className="px-4 py-1.5 rounded-full text-xs font-bold shadow-md bg-purple-500 hover:bg-purple-400 text-white"
+                >
+                  Deposit
+                </button>
+                <button
+                  onClick={handleWithdraw}
+                  className="px-4 py-1.5 rounded-full text-xs font-bold shadow-md bg-purple-300 hover:bg-purple-200 text-purple-900"
+                >
+                  Withdraw
+                </button>
+              </>
+            )}
             <AccountSwitcher />
           </div>
         </div>
       </div>
+
+      {isAuthenticated && error && (
+        <div className="bg-red-500/15 border-b border-red-500/30 px-4 py-1.5 text-center text-xs text-red-200">
+          {error}
+        </div>
+      )}
 
       {/* Marquee banner */}
       {showMarquee && (
@@ -96,20 +122,24 @@ function AppLayout() {
             <a href={`tel:${SUPPORT_PHONE}`} title={SUPPORT_PHONE_DISPLAY} className="w-9 h-9 grid place-items-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10">
               <Phone className="w-4 h-4 text-cyan-400" />
             </a>
-            <a
-              href="#login"
-              onClick={handleLogin}
-              className="px-4 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-sm inline-flex items-center gap-1.5"
-            >
-              <LogIn className="w-4 h-4" /> Log in
-            </a>
-            <a
-              href="#signup"
-              onClick={handleSignup}
-              className="px-4 py-1.5 rounded-full bg-pink-100 text-pink-900 hover:bg-white text-sm font-semibold inline-flex items-center gap-1.5"
-            >
-              <UserPlus className="w-4 h-4" /> Sign up
-            </a>
+            {!isAuthenticated && (
+              <>
+                <a
+                  href="#login"
+                  onClick={handleLogin}
+                  className="px-4 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-sm inline-flex items-center gap-1.5"
+                >
+                  <LogIn className="w-4 h-4" /> Log in
+                </a>
+                <a
+                  href="#signup"
+                  onClick={handleSignup}
+                  className="px-4 py-1.5 rounded-full bg-pink-100 text-pink-900 hover:bg-white text-sm font-semibold inline-flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" /> Sign up
+                </a>
+              </>
+            )}
           </div>
         </div>
 

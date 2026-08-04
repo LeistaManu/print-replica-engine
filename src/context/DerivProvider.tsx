@@ -1,5 +1,6 @@
-// React context that owns the Deriv session, account list, balances and
-// real-time synchronization. Consume it through `useDeriv()`.
+// Global Deriv session provider: owns the OAuth session, the WebSocket
+// lifecycle, the account list, live balances and account switching.
+// Consume it through `useDeriv()`.
 
 import {
   createContext,
@@ -13,10 +14,11 @@ import {
 } from "react";
 import * as auth from "@/lib/deriv-auth";
 import * as api from "@/lib/deriv-api";
-import { derivSocket } from "@/lib/deriv-socket";
+import { derivSocket, DerivApiError } from "@/lib/deriv-socket";
 import type { AuthorizeResult, BalanceInfo, DerivAccountInfo } from "@/lib/deriv-api";
 
 const ACTIVE_KEY = "digittool.deriv.activeLoginid";
+const BALANCE_POLL_MS = 12_000;
 
 export interface AccountBalance {
   loginid: string;
@@ -25,14 +27,22 @@ export interface AccountBalance {
   is_virtual: boolean;
 }
 
+export type DerivStatus = "signed-out" | "connecting" | "ready" | "error";
+
 export interface DerivContextValue {
+  isAuthenticated: boolean;
+  /** @deprecated use isAuthenticated */
   isLoggedIn: boolean;
+  status: DerivStatus;
+  isLoading: boolean;
   loading: boolean;
   error: string | null;
   connection: "open" | "closed" | "connecting";
+  user: AuthorizeResult | null;
   profile: AuthorizeResult | null;
   accounts: DerivAccountInfo[];
   balances: Record<string, AccountBalance>;
+  activeAccount: DerivAccountInfo | null;
   currentAccount: DerivAccountInfo | null;
   balance: number;
   currency: string;
@@ -44,14 +54,32 @@ export interface DerivContextValue {
   logout: () => void;
   switchAccount: (loginid: string) => Promise<void>;
   refresh: () => Promise<void>;
+  refreshBalance: () => Promise<void>;
   deposit: () => Promise<void>;
   withdraw: () => Promise<void>;
 }
 
 const DerivContext = createContext<DerivContextValue | null>(null);
 
+function readActive(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeActive(loginid: string) {
+  try {
+    localStorage.setItem(ACTIVE_KEY, loginid);
+  } catch {
+    /* noop */
+  }
+}
+
 export function DerivProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [profile, setProfile] = useState<AuthorizeResult | null>(null);
   const [accounts, setAccounts] = useState<DerivAccountInfo[]>([]);
   const [balances, setBalances] = useState<Record<string, AccountBalance>>({});
@@ -59,26 +87,30 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connection, setConnection] = useState<"open" | "closed" | "connecting">("closed");
-  const bootstrapped = useRef(false);
+  const virtualMapRef = useRef<Map<string, boolean>>(new Map());
+  const tokenRef = useRef<string | null>(null);
 
-  /* -------- read the stored session on mount -------- */
+  /* -------- restore the persisted session on mount -------- */
   useEffect(() => {
-    setToken(auth.getAccessToken());
-    try {
-      setActiveLoginid(localStorage.getItem(ACTIVE_KEY));
-    } catch {
-      /* noop */
-    }
+    const session = auth.getSession();
+    setToken(session?.access_token ?? null);
+    setActiveLoginid(readActive());
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
-    const off = derivSocket.onStatus(setConnection);
+    tokenRef.current = token;
+  }, [token]);
+
+  useEffect(() => {
+    const offStatus = derivSocket.onStatus(setConnection);
     return () => {
-      off();
+      offStatus();
     };
   }, []);
 
-  const applyBalanceSnapshot = useCallback((b: BalanceInfo, virtualMap: Map<string, boolean>) => {
+  const applyBalanceSnapshot = useCallback((b: BalanceInfo) => {
+    const virtualMap = virtualMapRef.current;
     setBalances((prev) => {
       const next = { ...prev };
       if (b.accounts) {
@@ -87,7 +119,10 @@ export function DerivProvider({ children }: { children: ReactNode }) {
             loginid,
             currency: info.currency,
             balance: info.balance,
-            is_virtual: info.demo_account === 1 || virtualMap.get(loginid) === true,
+            is_virtual:
+              info.demo_account === 1 ||
+              virtualMap.get(loginid) === true ||
+              loginid.startsWith("VR"),
           };
         });
       }
@@ -96,45 +131,49 @@ export function DerivProvider({ children }: { children: ReactNode }) {
           loginid: b.loginid,
           currency: b.currency,
           balance: b.balance,
-          is_virtual: virtualMap.get(b.loginid) ?? next[b.loginid]?.is_virtual ?? false,
+          is_virtual:
+            virtualMap.get(b.loginid) ??
+            next[b.loginid]?.is_virtual ??
+            b.loginid.startsWith("VR"),
         };
       }
       return next;
     });
   }, []);
 
+  const loadBalances = useCallback(async () => {
+    const snapshot = await api.getBalance("all");
+    applyBalanceSnapshot(snapshot);
+  }, [applyBalanceSnapshot]);
+
   /* -------- authorize + subscribe once we have a token -------- */
   useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    let unsubscribe: (() => void) | undefined;
+    if (!hydrated) return;
+    if (!token) {
+      setProfile(null);
+      setAccounts([]);
+      setBalances({});
+      setLoading(false);
+      return;
+    }
 
-    (async () => {
+    let cancelled = false;
+    let unsubscribeBalance: (() => void) | undefined;
+
+    const bootstrap = async () => {
       setLoading(true);
       setError(null);
       try {
-        const stored = (() => {
-          try {
-            return localStorage.getItem(ACTIVE_KEY);
-          } catch {
-            return null;
-          }
-        })();
-
-        let authorized = await api.authorize(token);
-        if (stored && stored !== authorized.loginid) {
-          try {
-            authorized = await api.switchAccount(token, stored);
-          } catch {
-            /* stay on the default account */
-          }
-        }
+        const authorized = await api.authorize(token);
         if (cancelled) return;
 
         setProfile(authorized);
-        setActiveLoginid(authorized.loginid);
         const list: DerivAccountInfo[] = (authorized.account_list ?? [
-          { loginid: authorized.loginid, currency: authorized.currency, is_virtual: authorized.is_virtual },
+          {
+            loginid: authorized.loginid,
+            currency: authorized.currency,
+            is_virtual: authorized.is_virtual,
+          },
         ]).map((a) => ({
           loginid: a.loginid,
           currency: a.currency || authorized.currency,
@@ -143,67 +182,110 @@ export function DerivProvider({ children }: { children: ReactNode }) {
           landing_company_name: a.landing_company_name,
         }));
         setAccounts(list);
-        const virtualMap = new Map(list.map((a) => [a.loginid, a.is_virtual]));
+        virtualMapRef.current = new Map(list.map((a) => [a.loginid, a.is_virtual]));
 
-        unsubscribe = api.subscribeBalance((b) => applyBalanceSnapshot(b, virtualMap));
-        const snapshot = await api.getBalance("all").catch(() => null);
-        if (snapshot && !cancelled) applyBalanceSnapshot(snapshot, virtualMap);
-        bootstrapped.current = true;
+        // Keep a previously chosen account, otherwise prefer the real one.
+        const stored = readActive();
+        const preferred =
+          (stored && list.find((a) => a.loginid === stored)?.loginid) ||
+          list.find((a) => !a.is_virtual)?.loginid ||
+          authorized.loginid;
+        setActiveLoginid(preferred);
+        writeActive(preferred);
+
+        unsubscribeBalance = api.subscribeBalance(applyBalanceSnapshot);
+        await loadBalances();
+        if (!cancelled) setError(null);
       } catch (e) {
         if (cancelled) return;
-        const message = e instanceof Error ? e.message : "Could not connect to Deriv.";
+        const message =
+          e instanceof DerivApiError
+            ? e.code === "timeout"
+              ? "Unable to reach the Deriv API. Retrying…"
+              : e.message
+            : e instanceof Error
+              ? e.message
+              : "Unable to connect to the Deriv API.";
         setError(message);
-        // Unauthorized / expired token: try a refresh, else drop the session.
-        if (/token|authoriz|invalid/i.test(message)) {
+
+        // Expired / invalid token: refresh when possible, else sign out.
+        if (/token|authoriz|invalid|expired/i.test(message)) {
           const refreshed = await auth.refreshSession();
-          if (refreshed) setToken(refreshed.access_token);
-          else auth.clearSession();
+          if (refreshed) {
+            setToken(refreshed.access_token);
+          } else {
+            auth.clearSession();
+            setToken(null);
+            setError("Your Deriv session expired. Please log in again.");
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    void bootstrap();
+
+    // Re-authorize + reload balances after every reconnect.
+    const offReauth = derivSocket.onReauthorize(() => {
+      void loadBalances().catch(() => undefined);
+    });
+    const offAuthError = derivSocket.onAuthError((e) => {
+      setError(e.message || "Authorization failed. Please log in again.");
+    });
+
+    // Safety-net polling so the UI never stalls if the stream goes quiet.
+    const poll = setInterval(() => {
+      if (!tokenRef.current) return;
+      void loadBalances().catch(() => undefined);
+    }, BALANCE_POLL_MS);
 
     return () => {
       cancelled = true;
-      unsubscribe?.();
+      clearInterval(poll);
+      offReauth();
+      offAuthError();
+      unsubscribeBalance?.();
     };
-  }, [token, applyBalanceSnapshot]);
+  }, [hydrated, token, applyBalanceSnapshot, loadBalances]);
 
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const virtualMap = new Map(accounts.map((a) => [a.loginid, a.is_virtual]));
-      const b = await api.getBalance("all");
-      applyBalanceSnapshot(b, virtualMap);
+      await loadBalances();
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not refresh balances.");
+      setError(e instanceof Error ? e.message : "Balance unavailable right now.");
     }
-  }, [token, accounts, applyBalanceSnapshot]);
+  }, [token, loadBalances]);
 
   const switchAccount = useCallback(
     async (loginid: string) => {
       if (!token) return;
+      setActiveLoginid(loginid);
+      writeActive(loginid);
       setLoading(true);
       setError(null);
       try {
+        // Best effort: re-authorize onto the selected account when the token
+        // grants it. Balances for every account are already streamed, so the
+        // UI stays correct even if the API rejects the switch.
         const authorized = await api.switchAccount(token, loginid);
         setProfile(authorized);
         setActiveLoginid(authorized.loginid);
-        try {
-          localStorage.setItem(ACTIVE_KEY, authorized.loginid);
-        } catch {
-          /* noop */
-        }
-        await refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not switch account.");
+        writeActive(authorized.loginid);
+      } catch {
+        /* display-only switch */
       } finally {
+        try {
+          await loadBalances();
+        } catch {
+          /* keep last known balances */
+        }
         setLoading(false);
       }
     },
-    [token, refresh],
+    [token, loadBalances],
   );
 
   const doDeposit = useCallback(async () => {
@@ -218,6 +300,10 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   const handleLogout = useCallback(() => {
     void api.logout();
+    setToken(null);
+    setProfile(null);
+    setAccounts([]);
+    setBalances({});
     auth.logout("/");
   }, []);
 
@@ -237,17 +323,31 @@ export function DerivProvider({ children }: { children: ReactNode }) {
     [balances],
   );
 
+  const isAuthenticated = !!token;
+  const status: DerivStatus = !isAuthenticated
+    ? "signed-out"
+    : error && !activeBalance
+      ? "error"
+      : activeBalance
+        ? "ready"
+        : "connecting";
+
   const value: DerivContextValue = {
-    isLoggedIn: !!token,
+    isAuthenticated,
+    isLoggedIn: isAuthenticated,
+    status,
+    isLoading: loading,
     loading,
     error,
     connection,
+    user: profile,
     profile,
     accounts,
     balances,
+    activeAccount: currentAccount,
     currentAccount,
     balance: activeBalance?.balance ?? profile?.balance ?? 0,
-    currency: activeBalance?.currency ?? profile?.currency ?? "USD",
+    currency: activeBalance?.currency ?? currentAccount?.currency ?? profile?.currency ?? "USD",
     loginid: activeLoginid,
     isDemo: currentAccount?.is_virtual ?? profile?.is_virtual === 1,
     demoBalance,
@@ -256,6 +356,7 @@ export function DerivProvider({ children }: { children: ReactNode }) {
     logout: handleLogout,
     switchAccount,
     refresh,
+    refreshBalance: refresh,
     deposit: doDeposit,
     withdraw: doWithdraw,
   };

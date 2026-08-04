@@ -1,20 +1,35 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ArrowDownCircle, ArrowUpCircle, LogOut, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import {
+  ChevronDown,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  LogOut,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Loader2,
+  TriangleAlert,
+  User,
+} from "lucide-react";
 import { useDeriv } from "@/context/DerivProvider";
 import { formatMoney } from "@/lib/deriv-api";
 
 /** Deriv-style account switcher: demo + real accounts, cashier actions, logout. */
 export function AccountSwitcher() {
   const {
-    isLoggedIn,
+    isAuthenticated,
     accounts,
     balances,
-    currentAccount,
+    activeAccount,
     balance,
     currency,
+    loginid,
     isDemo,
-    loading,
+    status,
+    error,
+    isLoading,
     connection,
+    user,
     login,
     logout,
     switchAccount,
@@ -33,7 +48,7 @@ export function AccountSwitcher() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     return (
       <button
         onClick={() => login("/app/dashboard")}
@@ -46,9 +61,13 @@ export function AccountSwitcher() {
 
   const demoAccounts = accounts.filter((a) => a.is_virtual);
   const realAccounts = accounts.filter((a) => !a.is_virtual);
+  const initials = (user?.fullname || user?.email || loginid || "D").trim().charAt(0).toUpperCase();
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative flex items-center gap-2" ref={ref}>
+      <span className="hidden sm:grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-black">
+        {initials || <User className="h-4 w-4" />}
+      </span>
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
@@ -60,13 +79,32 @@ export function AccountSwitcher() {
         >
           {isDemo ? "DEMO" : "REAL"}
         </span>
-        <span className="text-white/50">{currency}</span>
-        <span className="font-bold tabular-nums">{formatMoney(balance, "").trim()}</span>
+        {status === "ready" ? (
+          <>
+            <span className="text-white/50">{currency}</span>
+            <span className="font-bold tabular-nums">{formatMoney(balance, "").trim()}</span>
+          </>
+        ) : status === "error" ? (
+          <span className="inline-flex items-center gap-1 text-xs text-red-300">
+            <TriangleAlert className="h-3.5 w-3.5" /> Balance unavailable
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs text-white/60">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading balance…
+          </span>
+        )}
         <ChevronDown className={`h-4 w-4 text-white/50 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-white/10 bg-[#0f1424] shadow-2xl">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-white/10 bg-[#0f1424] shadow-2xl">
+          <div className="border-b border-white/5 px-4 py-3">
+            <div className="text-sm font-semibold">{user?.fullname || user?.email || "Deriv account"}</div>
+            <div className="text-xs text-white/40">
+              {loginid} {activeAccount?.landing_company_name ? `• ${activeAccount.landing_company_name}` : ""}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-2 text-xs text-white/50">
             <span className="inline-flex items-center gap-1.5">
               {connection === "open" ? (
@@ -74,16 +112,22 @@ export function AccountSwitcher() {
               ) : (
                 <WifiOff className="h-3.5 w-3.5 text-red-400" />
               )}
-              {connection === "open" ? "Live" : connection === "connecting" ? "Connecting…" : "Offline"}
+              {connection === "open" ? "Live" : connection === "connecting" ? "Connecting…" : "Reconnecting…"}
             </span>
             <button onClick={() => void refresh()} className="inline-flex items-center gap-1 hover:text-white">
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
             </button>
           </div>
 
+          {error && (
+            <div className="border-b border-white/5 bg-red-500/10 px-4 py-2 text-xs text-red-200">
+              {error}
+            </div>
+          )}
+
           {[
-            { label: "Demo", list: demoAccounts },
             { label: "Real", list: realAccounts },
+            { label: "Demo", list: demoAccounts },
           ].map(({ label, list }) =>
             list.length ? (
               <div key={label} className="border-b border-white/5 py-2">
@@ -92,7 +136,7 @@ export function AccountSwitcher() {
                 </div>
                 {list.map((a) => {
                   const b = balances[a.loginid];
-                  const active = currentAccount?.loginid === a.loginid;
+                  const active = activeAccount?.loginid === a.loginid;
                   return (
                     <button
                       key={a.loginid}
@@ -112,7 +156,11 @@ export function AccountSwitcher() {
                         </span>
                       </span>
                       <span className="font-bold tabular-nums">
-                        {formatMoney(b?.balance ?? 0, b?.currency ?? a.currency)}
+                        {b ? (
+                          formatMoney(b.balance, b.currency ?? a.currency)
+                        ) : (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40" />
+                        )}
                       </span>
                     </button>
                   );
