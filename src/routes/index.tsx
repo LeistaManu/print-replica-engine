@@ -80,6 +80,7 @@ function LandingPage() {
   const typed = useTypewriter(typewriterPhrases);
   const loop = [...testimonials, ...testimonials];
   const navigate = useNavigate();
+  const { isAuthenticated } = useDeriv();
   // If Deriv OAuth returned us to "/" (?acct1=…&token1=…) or we flagged an
   // in-flight auth, jump straight into the workspace.
   useEffect(() => {
