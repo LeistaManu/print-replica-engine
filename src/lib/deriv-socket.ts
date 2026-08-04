@@ -37,6 +37,7 @@ class DerivSocket {
   private queue: string[] = [];
   private token: string | null = null;
   private retries = 0;
+  private hasConnectedOnce = false;
   private closedByUs = false;
   private statusListeners = new Set<(s: "open" | "closed" | "connecting") => void>();
   private reauthListeners = new Set<() => void>();
