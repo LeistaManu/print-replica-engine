@@ -31,10 +31,7 @@ export type DerivStatus = "signed-out" | "connecting" | "ready" | "error";
 
 export interface DerivContextValue {
   isAuthenticated: boolean;
-  /** True until the persisted session has been read — prevents guest-button flash. */
   isInitializing: boolean;
-
-  /** @deprecated use isAuthenticated */
   isLoggedIn: boolean;
   status: DerivStatus;
   isLoading: boolean;
@@ -75,9 +72,7 @@ function readActive(): string | null {
 function writeActive(loginid: string) {
   try {
     localStorage.setItem(ACTIVE_KEY, loginid);
-  } catch {
-    /* noop */
-  }
+  } catch {}
 }
 
 export function DerivProvider({ children }: { children: ReactNode }) {
@@ -90,34 +85,29 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connection, setConnection] = useState<"open" | "closed" | "connecting">("closed");
+
   const virtualMapRef = useRef<Map<string, boolean>>(new Map());
   const tokenRef = useRef<string | null>(null);
 
-  /* -------- restore the persisted session on mount + stay in sync -------- */
+  // Restore session on mount
   useEffect(() => {
-    // Deriv can return either an OAuth code (handled by /auth/callback) or
-    // legacy acct1/token1 query params on ANY return URL — capture those too.
-    const read = () => {
+    const sync = () => {
       const session = auth.captureRedirectTokens() ?? auth.getSession();
-      setToken((prev) => (prev === (session?.access_token ?? null) ? prev : session?.access_token ?? null));
+      setToken(session?.access_token ?? null);
     };
-    read();
+
+    sync();
     setActiveLoginid(readActive());
     setHydrated(true);
 
-    // The /auth/callback route stores the token and navigates client-side, so
-    // without this the provider would keep its stale `null` token and the UI
-    // would stay in the signed-out state after a successful login.
-    const off = auth.subscribeSession(read);
-    const onFocus = () => read();
-    window.addEventListener("focus", onFocus);
+    const off = auth.subscribeSession(sync);
+    window.addEventListener("focus", sync);
+
     return () => {
       off();
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", sync);
     };
   }, []);
-
-
 
   useEffect(() => {
     tokenRef.current = token;
@@ -125,15 +115,15 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const offStatus = derivSocket.onStatus(setConnection);
-    return () => {
-      offStatus();
-    };
+    return () => offStatus();
   }, []);
 
   const applyBalanceSnapshot = useCallback((b: BalanceInfo) => {
     const virtualMap = virtualMapRef.current;
+
     setBalances((prev) => {
       const next = { ...prev };
+
       if (b.accounts) {
         Object.entries(b.accounts).forEach(([loginid, info]) => {
           next[loginid] = {
@@ -147,6 +137,7 @@ export function DerivProvider({ children }: { children: ReactNode }) {
           };
         });
       }
+
       if (b.loginid) {
         next[b.loginid] = {
           loginid: b.loginid,
@@ -158,6 +149,7 @@ export function DerivProvider({ children }: { children: ReactNode }) {
             b.loginid.startsWith("VR"),
         };
       }
+
       return next;
     });
   }, []);
@@ -167,9 +159,10 @@ export function DerivProvider({ children }: { children: ReactNode }) {
     applyBalanceSnapshot(snapshot);
   }, [applyBalanceSnapshot]);
 
-  /* -------- authorize + subscribe once we have a token -------- */
+  // Authorize + subscribe
   useEffect(() => {
     if (!hydrated) return;
+
     if (!token) {
       setProfile(null);
       setAccounts([]);
@@ -184,11 +177,13 @@ export function DerivProvider({ children }: { children: ReactNode }) {
     const bootstrap = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const authorized = await api.authorize(token);
         if (cancelled) return;
 
         setProfile(authorized);
+
         const list: DerivAccountInfo[] = (authorized.account_list ?? [
           {
             loginid: authorized.loginid,
@@ -202,23 +197,26 @@ export function DerivProvider({ children }: { children: ReactNode }) {
           account_type: a.account_type,
           landing_company_name: a.landing_company_name,
         }));
+
         setAccounts(list);
         virtualMapRef.current = new Map(list.map((a) => [a.loginid, a.is_virtual]));
 
-        // Keep a previously chosen account, otherwise prefer the real one.
         const stored = readActive();
         const preferred =
           (stored && list.find((a) => a.loginid === stored)?.loginid) ||
           list.find((a) => !a.is_virtual)?.loginid ||
           authorized.loginid;
+
         setActiveLoginid(preferred);
         writeActive(preferred);
 
         unsubscribeBalance = api.subscribeBalance(applyBalanceSnapshot);
         await loadBalances();
+
         if (!cancelled) setError(null);
       } catch (e) {
         if (cancelled) return;
+
         const message =
           e instanceof DerivApiError
             ? e.code === "timeout"
@@ -227,18 +225,26 @@ export function DerivProvider({ children }: { children: ReactNode }) {
             : e instanceof Error
               ? e.message
               : "Unable to connect to the Deriv API.";
+
         setError(message);
 
-        // Expired / invalid token: refresh when possible, else sign out.
+        // Handle expired / invalid token
         if (/token|authoriz|invalid|expired/i.test(message)) {
           const refreshed = await auth.refreshSession();
+
           if (refreshed) {
             setToken(refreshed.access_token);
-          } else {
-            auth.clearSession();
-            setToken(null);
-            setError("Your Deriv session expired. Please log in again.");
+            setError(null);
+            return;
           }
+
+          auth.clearSession();
+          setToken(null);
+          setProfile(null);
+          setAccounts([]);
+          setBalances({});
+          setActiveLoginid(null);
+          setError("Your Deriv session expired. Please log in again.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -247,15 +253,14 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
     void bootstrap();
 
-    // Re-authorize + reload balances after every reconnect.
     const offReauth = derivSocket.onReauthorize(() => {
       void loadBalances().catch(() => undefined);
     });
+
     const offAuthError = derivSocket.onAuthError((e) => {
       setError(e.message || "Authorization failed. Please log in again.");
     });
 
-    // Safety-net polling so the UI never stalls if the stream goes quiet.
     const poll = setInterval(() => {
       if (!tokenRef.current) return;
       void loadBalances().catch(() => undefined);
@@ -272,6 +277,7 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (!token) return;
+
     try {
       await loadBalances();
       setError(null);
@@ -283,27 +289,23 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   const switchAccount = useCallback(
     async (loginid: string) => {
       if (!token) return;
+
       setActiveLoginid(loginid);
       writeActive(loginid);
       setLoading(true);
       setError(null);
+
       try {
-        // Prefer the account-specific token captured from the Deriv redirect,
-        // so switching works even when the session token is scoped elsewhere.
         const accountToken = auth.getTokenFor(loginid) ?? token;
         const authorized = await api.switchAccount(accountToken, loginid);
+
         setProfile(authorized);
         setActiveLoginid(authorized.loginid);
         writeActive(authorized.loginid);
-      } catch {
-
-        /* display-only switch */
       } finally {
         try {
           await loadBalances();
-        } catch {
-          /* keep last known balances */
-        }
+        } catch {}
         setLoading(false);
       }
     },
@@ -340,12 +342,18 @@ export function DerivProvider({ children }: { children: ReactNode }) {
     () => Object.values(balances).find((b) => b.is_virtual) ?? null,
     [balances],
   );
+
   const realBalance = useMemo(
     () => Object.values(balances).find((b) => !b.is_virtual) ?? null,
     [balances],
   );
 
-  const isAuthenticated = !!token;
+  // Source of truth = persisted session OR current token
+  const session = auth.getSession();
+
+  const isAuthenticated =
+    !!session?.access_token || !!token;
+
   const status: DerivStatus = !isAuthenticated
     ? "signed-out"
     : error && !activeBalance
@@ -357,7 +365,6 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   const value: DerivContextValue = {
     isAuthenticated,
     isInitializing: !hydrated,
-
     isLoggedIn: isAuthenticated,
     status,
     isLoading: loading,
