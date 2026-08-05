@@ -146,7 +146,7 @@ function LandingPage() {
           >
             Start Trading Now <ArrowRight className="h-4 w-4" />
           </Link>
-          {!isAuthenticated && (
+          {!isAuthenticated && !isInitializing && (
             <>
               <a
                 href="#login"
