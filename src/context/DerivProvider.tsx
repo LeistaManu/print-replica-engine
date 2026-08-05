@@ -90,15 +90,30 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   const virtualMapRef = useRef<Map<string, boolean>>(new Map());
   const tokenRef = useRef<string | null>(null);
 
-  /* -------- restore the persisted session on mount -------- */
+  /* -------- restore the persisted session on mount + stay in sync -------- */
   useEffect(() => {
     // Deriv can return either an OAuth code (handled by /auth/callback) or
     // legacy acct1/token1 query params on ANY return URL — capture those too.
-    const session = auth.captureRedirectTokens() ?? auth.getSession();
-    setToken(session?.access_token ?? null);
+    const read = () => {
+      const session = auth.captureRedirectTokens() ?? auth.getSession();
+      setToken((prev) => (prev === (session?.access_token ?? null) ? prev : session?.access_token ?? null));
+    };
+    read();
     setActiveLoginid(readActive());
     setHydrated(true);
+
+    // The /auth/callback route stores the token and navigates client-side, so
+    // without this the provider would keep its stale `null` token and the UI
+    // would stay in the signed-out state after a successful login.
+    const off = auth.subscribeSession(read);
+    const onFocus = () => read();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      off();
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
+
 
 
   useEffect(() => {
