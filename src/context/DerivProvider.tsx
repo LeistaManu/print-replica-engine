@@ -31,6 +31,9 @@ export type DerivStatus = "signed-out" | "connecting" | "ready" | "error";
 
 export interface DerivContextValue {
   isAuthenticated: boolean;
+  /** True until the persisted session has been read — prevents guest-button flash. */
+  isInitializing: boolean;
+
   /** @deprecated use isAuthenticated */
   isLoggedIn: boolean;
   status: DerivStatus;
