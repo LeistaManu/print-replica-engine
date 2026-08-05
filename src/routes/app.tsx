@@ -38,6 +38,8 @@ function AppLayout() {
   const [showCashier, setShowCashier] = useState(false);
   const {
     isAuthenticated,
+    isInitializing,
+
     status,
     balance: liveBalance,
     currency: liveCurrency,
