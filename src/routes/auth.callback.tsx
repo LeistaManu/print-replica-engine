@@ -39,10 +39,18 @@ function AuthCallback() {
       return;
     }
     if (!code) {
+      // Deriv sometimes returns the classic acct1/token1 params instead of a
+      // PKCE code — accept those so the session is still established.
+      const legacy = captureRedirectTokens();
+      if (legacy) {
+        void router.navigate({ to: consumeReturnTo() || POST_LOGIN_PATH, replace: true });
+        return;
+      }
       setStatus("error");
       setMessage("No authorization code was returned by Deriv.");
       return;
     }
+
 
     (async () => {
       try {
