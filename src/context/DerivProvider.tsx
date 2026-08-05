@@ -92,11 +92,14 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   /* -------- restore the persisted session on mount -------- */
   useEffect(() => {
-    const session = auth.getSession();
+    // Deriv can return either an OAuth code (handled by /auth/callback) or
+    // legacy acct1/token1 query params on ANY return URL — capture those too.
+    const session = auth.captureRedirectTokens() ?? auth.getSession();
     setToken(session?.access_token ?? null);
     setActiveLoginid(readActive());
     setHydrated(true);
   }, []);
+
 
   useEffect(() => {
     tokenRef.current = token;
