@@ -356,6 +356,8 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   const value: DerivContextValue = {
     isAuthenticated,
+    isInitializing: !hydrated,
+
     isLoggedIn: isAuthenticated,
     status,
     isLoading: loading,
