@@ -30,7 +30,6 @@ export function AccountSwitcher() {
     isLoading,
     connection,
     user,
-    login,
     logout,
     switchAccount,
     refresh,
