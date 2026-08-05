@@ -124,7 +124,7 @@ function AppLayout() {
             <a href={`tel:${SUPPORT_PHONE}`} title={SUPPORT_PHONE_DISPLAY} className="w-9 h-9 grid place-items-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10">
               <Phone className="w-4 h-4 text-cyan-400" />
             </a>
-            {!isAuthenticated && (
+            {!isAuthenticated && !isInitializing && (
               <>
                 <a
                   href="#login"
