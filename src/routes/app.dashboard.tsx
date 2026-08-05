@@ -67,9 +67,12 @@ function Dashboard() {
           <p className="text-white/60 text-sm">Here's what's happening across your accounts today.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => (isLoggedIn ? void deposit() : login("/app/dashboard"))} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">
-            {isLoggedIn ? "Deposit" : "Log in with Deriv"}
-          </button>
+          {isLoggedIn && (
+            <button onClick={() => void deposit()} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">
+              Deposit
+            </button>
+          )}
+
           <Link to="/app/portfolio" className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">Portfolio</Link>
           <button className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold text-sm">New Bot</button>
         </div>

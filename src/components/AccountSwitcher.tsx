@@ -30,7 +30,6 @@ export function AccountSwitcher() {
     isLoading,
     connection,
     user,
-    login,
     logout,
     switchAccount,
     refresh,
@@ -48,16 +47,10 @@ export function AccountSwitcher() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  if (!isAuthenticated) {
-    return (
-      <button
-        onClick={() => login("/app/dashboard")}
-        className="rounded-full bg-cyan-500 px-4 py-1.5 text-sm font-semibold text-slate-900 hover:bg-cyan-400"
-      >
-        Log in with Deriv
-      </button>
-    );
-  }
+  // Signed out: the header already renders Log in / Sign up, so stay quiet
+  // instead of adding a second login button.
+  if (!isAuthenticated) return null;
+
 
   const demoAccounts = accounts.filter((a) => a.is_virtual);
   const realAccounts = accounts.filter((a) => !a.is_virtual);

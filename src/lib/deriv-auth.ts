@@ -76,6 +76,7 @@ export function clearSession() {
   try {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem("digittool.deriv.activeLoginid");
+    localStorage.removeItem("digittool.deriv.tokens");
   } catch {
     /* noop */
   }
@@ -257,4 +258,69 @@ export function logout(redirectTo = "/") {
   clearSession();
   clearPkce();
   if (typeof window !== "undefined") window.location.assign(redirectTo);
+}
+
+/* ------------------------------------------------------------------ *
+ * Deriv redirect token capture (acct1/token1/cur1 … query params)
+ * ------------------------------------------------------------------ */
+
+const TOKENS_KEY = "digittool.deriv.tokens";
+
+export function getAccountTokens(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(TOKENS_KEY) || "{}") as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+export function getTokenFor(loginid: string): string | null {
+  return getAccountTokens()[loginid] ?? null;
+}
+
+function setAccountTokens(map: Record<string, string>) {
+  try {
+    localStorage.setItem(TOKENS_KEY, JSON.stringify(map));
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Deriv's OAuth redirect appends `acct1`, `token1`, `cur1`, `acct2`… to the
+ * return URL. Persist those tokens as the active session and strip them from
+ * the address bar. Returns the captured session, or null when absent.
+ */
+export function captureRedirectTokens(): DerivSession | null {
+  if (typeof window === "undefined") return null;
+  const url = new URL(window.location.href);
+  const qs = url.searchParams;
+  if (!qs.has("token1")) return null;
+
+  const tokens: Record<string, string> = { ...getAccountTokens() };
+  let first: string | null = null;
+  for (let i = 1; i < 20; i++) {
+    const token = qs.get(`token${i}`);
+    const acct = qs.get(`acct${i}`);
+    if (!token) break;
+    if (acct) tokens[acct] = token;
+    if (!first) first = token;
+    qs.delete(`token${i}`);
+    qs.delete(`acct${i}`);
+    qs.delete(`cur${i}`);
+  }
+  if (!first) return null;
+
+  setAccountTokens(tokens);
+  const session: DerivSession = { access_token: first, token_type: "Bearer" };
+  setSession(session);
+
+  // Clean the URL so tokens never linger in history or get shared.
+  try {
+    window.history.replaceState({}, "", `${url.pathname}${qs.toString() ? `?${qs}` : ""}${url.hash}`);
+  } catch {
+    /* noop */
+  }
+  return session;
 }

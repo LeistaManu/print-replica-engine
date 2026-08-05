@@ -92,11 +92,14 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   /* -------- restore the persisted session on mount -------- */
   useEffect(() => {
-    const session = auth.getSession();
+    // Deriv can return either an OAuth code (handled by /auth/callback) or
+    // legacy acct1/token1 query params on ANY return URL — capture those too.
+    const session = auth.captureRedirectTokens() ?? auth.getSession();
     setToken(session?.access_token ?? null);
     setActiveLoginid(readActive());
     setHydrated(true);
   }, []);
+
 
   useEffect(() => {
     tokenRef.current = token;
@@ -267,14 +270,15 @@ export function DerivProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       try {
-        // Best effort: re-authorize onto the selected account when the token
-        // grants it. Balances for every account are already streamed, so the
-        // UI stays correct even if the API rejects the switch.
-        const authorized = await api.switchAccount(token, loginid);
+        // Prefer the account-specific token captured from the Deriv redirect,
+        // so switching works even when the session token is scoped elsewhere.
+        const accountToken = auth.getTokenFor(loginid) ?? token;
+        const authorized = await api.switchAccount(accountToken, loginid);
         setProfile(authorized);
         setActiveLoginid(authorized.loginid);
         writeActive(authorized.loginid);
       } catch {
+
         /* display-only switch */
       } finally {
         try {
