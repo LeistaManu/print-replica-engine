@@ -1,12 +1,13 @@
 // src/components/Navbar.tsx
 
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from '@tanstack/react-router'
 
 import {
   isLoggedIn,
   subscribeSession,
   logout,
+  login,
 } from '@/lib/deriv-auth'
 
 export default function Navbar() {
@@ -67,12 +68,12 @@ export default function Navbar() {
             </button>
           ) : (
             <>
-              <Link
-                to="/login"
+              <button
+                onClick={() => login('/app/dashboard')}
                 className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-slate-900"
               >
                 Log in
-              </Link>
+              </button>
 
               <Link
                 to="/signup"
