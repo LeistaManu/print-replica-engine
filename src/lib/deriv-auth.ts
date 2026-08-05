@@ -48,6 +48,32 @@ async function sha256Challenge(verifier: string): Promise<string> {
  * Session storage
  * ------------------------------------------------------------------ */
 
+/** Broadcast name used to keep every consumer of the session in sync. */
+export const SESSION_EVENT = "digittool:deriv-session";
+
+function broadcastSession() {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(new Event(SESSION_EVENT));
+  } catch {
+    /* noop */
+  }
+}
+
+/** Subscribe to session changes (login, logout, token capture, other tabs). */
+export function subscribeSession(fn: () => void): () => void {
+  if (typeof window === "undefined") return () => undefined;
+  const onStorage = (e: StorageEvent) => {
+    if (!e.key || e.key === SESSION_KEY) fn();
+  };
+  window.addEventListener(SESSION_EVENT, fn);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(SESSION_EVENT, fn);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
 export function getSession(): DerivSession | null {
   if (typeof window === "undefined") return null;
   try {
@@ -69,6 +95,7 @@ export function setSession(session: DerivSession) {
   } catch {
     /* storage unavailable */
   }
+  broadcastSession();
 }
 
 export function clearSession() {
@@ -80,6 +107,7 @@ export function clearSession() {
   } catch {
     /* noop */
   }
+  broadcastSession();
 }
 
 export function getAccessToken(): string | null {
@@ -89,6 +117,7 @@ export function getAccessToken(): string | null {
 export function isLoggedIn(): boolean {
   return !!getAccessToken();
 }
+
 
 /* ------------------------------------------------------------------ *
  * Login / callback / logout

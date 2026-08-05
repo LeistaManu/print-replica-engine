@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
-import { consumeReturnTo, exchangeCode } from "@/lib/deriv-auth";
+import { captureRedirectTokens, consumeReturnTo, exchangeCode } from "@/lib/deriv-auth";
 import { POST_LOGIN_PATH } from "@/lib/deriv-config";
 
 export const Route = createFileRoute("/auth/callback")({
@@ -39,10 +39,18 @@ function AuthCallback() {
       return;
     }
     if (!code) {
+      // Deriv sometimes returns the classic acct1/token1 params instead of a
+      // PKCE code — accept those so the session is still established.
+      const legacy = captureRedirectTokens();
+      if (legacy) {
+        void router.navigate({ to: consumeReturnTo() || POST_LOGIN_PATH, replace: true });
+        return;
+      }
       setStatus("error");
       setMessage("No authorization code was returned by Deriv.");
       return;
     }
+
 
     (async () => {
       try {
