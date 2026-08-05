@@ -270,14 +270,15 @@ export function DerivProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       try {
-        // Best effort: re-authorize onto the selected account when the token
-        // grants it. Balances for every account are already streamed, so the
-        // UI stays correct even if the API rejects the switch.
-        const authorized = await api.switchAccount(token, loginid);
+        // Prefer the account-specific token captured from the Deriv redirect,
+        // so switching works even when the session token is scoped elsewhere.
+        const accountToken = auth.getTokenFor(loginid) ?? token;
+        const authorized = await api.switchAccount(accountToken, loginid);
         setProfile(authorized);
         setActiveLoginid(authorized.loginid);
         writeActive(authorized.loginid);
       } catch {
+
         /* display-only switch */
       } finally {
         try {
