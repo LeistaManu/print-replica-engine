@@ -46,19 +46,25 @@ class DerivSocket {
 
   onStatus(fn: (s: "open" | "closed" | "connecting") => void) {
     this.statusListeners.add(fn);
-    return () => this.statusListeners.delete(fn);
+    return () => {
+      this.statusListeners.delete(fn);
+    };
   }
 
   /** Fired every time the socket (re)connects AND re-authorizes successfully. */
   onReauthorize(fn: () => void) {
     this.reauthListeners.add(fn);
-    return () => this.reauthListeners.delete(fn);
+    return () => {
+      this.reauthListeners.delete(fn);
+    };
   }
 
   /** Fired when re-authorization fails (expired / invalid token). */
   onAuthError(fn: (e: DerivApiError) => void) {
     this.authErrorListeners.add(fn);
-    return () => this.authErrorListeners.delete(fn);
+    return () => {
+      this.authErrorListeners.delete(fn);
+    };
   }
 
   private emitStatus(s: "open" | "closed" | "connecting") {
