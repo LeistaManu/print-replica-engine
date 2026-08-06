@@ -89,23 +89,30 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   const virtualMapRef = useRef<Map<string, boolean>>(new Map());
   const tokenRef = useRef<string | null>(null);
 
-  // Restore session on mount
+  // Restore session on mount. An expired access token may still contain a
+  // usable refresh token, so complete that check before ending hydration.
   useEffect(() => {
-    const sync = () => {
+    let cancelled = false;
+
+    const sync = async () => {
       const session = auth.captureRedirectTokens() ?? auth.getSession();
-      setToken(session?.access_token ?? null);
+      const restored = session ?? (await auth.refreshSession());
+      if (!cancelled) setToken(restored?.access_token ?? null);
     };
 
-    sync();
     setActiveLoginid(readActive());
-    setHydrated(true);
+    void sync().finally(() => {
+      if (!cancelled) setHydrated(true);
+    });
 
-    const off = auth.subscribeSession(sync);
-    window.addEventListener("focus", sync);
+    const handleSessionChange = () => void sync();
+    const off = auth.subscribeSession(handleSessionChange);
+    window.addEventListener("focus", handleSessionChange);
 
     return () => {
+      cancelled = true;
       off();
-      window.removeEventListener("focus", sync);
+      window.removeEventListener("focus", handleSessionChange);
     };
   }, []);
 
@@ -228,8 +235,17 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
         setError(message);
 
-        // Handle expired / invalid token
-        if (/token|authoriz|invalid|expired/i.test(message)) {
+        // Only token-specific API codes are allowed to destroy a persisted
+        // login. Previously the broad /authoriz/ message match also cleared
+        // valid sessions for app-id, permission and connection errors.
+        const invalidTokenCodes = new Set([
+          "InvalidToken",
+          "InvalidTokenFormat",
+          "TokenExpired",
+          "AuthorizationRequired",
+        ]);
+
+        if (e instanceof DerivApiError && invalidTokenCodes.has(e.code)) {
           const refreshed = await auth.refreshSession();
 
           if (refreshed) {
