@@ -101,9 +101,10 @@ export function getSession(): DerivSession | null {
       return null
     }
 
-    // FIX: clear expired session completely
+    // Keep an expired session long enough for refreshSession() to use its
+    // refresh token. Clearing it here made refresh impossible and forced the
+    // UI back to guest mode as soon as an access token reached its expiry.
     if (session.expires_at && session.expires_at < Date.now()) {
-      clearSession()
       return null
     }
 
@@ -181,7 +182,7 @@ export async function ensureValidSession(): Promise<DerivSession | null> {
   const current = getSession()
   if (current) return current
 
-  return await refreshSession()
+  return refreshSession()
 }
 
 /* -------------------------------------------------- */

@@ -34,10 +34,18 @@ function Dashboard() {
     deposit,
   } = useDeriv();
 
+  const knownBalances = [realBalance, demoBalance].filter(
+    (item): item is NonNullable<typeof item> => item !== null,
+  );
+  const totalBalance = knownBalances.reduce((sum, item) => sum + item.balance, 0);
+  const totalCurrency = knownBalances[0]?.currency ?? currency;
+
   const kpis = [
     {
-      label: isLoggedIn ? `${isDemo ? "Demo" : "Real"} Balance (${loginid ?? "—"})` : "Total Balance",
-      value: isLoggedIn ? formatMoney(balance, currency) : "—",
+      label: "Total Balance",
+      value: isLoggedIn
+        ? formatMoney(knownBalances.length ? totalBalance : balance, totalCurrency)
+        : "—",
       change: isLoggedIn ? (loading ? "syncing…" : "live") : "sign in to sync",
       up: true,
       icon: Wallet,
