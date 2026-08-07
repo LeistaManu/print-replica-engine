@@ -36,6 +36,13 @@ class DerivSocket {
   private subscribers = new Map<string, Set<Listener>>(); // msg_type -> listeners
   private queue: string[] = [];
   private token: string | null = null;
+  private authorized = false;
+  private authorizationInFlight = false;
+  private lastAuthorization: DerivResponse | null = null;
+  private authorizationWaiters = new Set<{
+    resolve: (v: DerivResponse) => void;
+    reject: (e: Error) => void;
+  }>();
   private retries = 0;
   private hasConnectedOnce = false;
   private closedByUs = false;
@@ -72,7 +79,67 @@ class DerivSocket {
   }
 
   setToken(token: string | null) {
+    if (this.token !== token) {
+      this.authorized = false;
+      this.lastAuthorization = null;
+    }
     this.token = token;
+  }
+
+  /**
+   * Authorize exactly once for the current connection. Authenticated requests
+   * remain queued until Deriv confirms the authorize request.
+   */
+  authorize(token: string): Promise<DerivResponse> {
+    this.setToken(token);
+
+    if (
+      this.authorized &&
+      this.lastAuthorization &&
+      this.ws?.readyState === WebSocket.OPEN
+    ) {
+      return Promise.resolve(this.lastAuthorization);
+    }
+
+    const result = new Promise<DerivResponse>((resolve, reject) => {
+      this.authorizationWaiters.add({ resolve, reject });
+    });
+
+    if (this.ws?.readyState === WebSocket.OPEN) this.authorizeCurrentConnection();
+    else this.connect();
+
+    return result;
+  }
+
+  private authorizeCurrentConnection() {
+    const token = this.token;
+    if (!token || this.authorized || this.authorizationInFlight) return;
+    this.authorizationInFlight = true;
+
+    this.send({ authorize: token })
+      .then((response) => {
+        this.authorizationInFlight = false;
+        this.authorized = true;
+        this.lastAuthorization = response;
+        this.authorizationWaiters.forEach((waiter) => waiter.resolve(response));
+        this.authorizationWaiters.clear();
+
+        const queued = this.queue.splice(0);
+        queued.forEach((message) => this.ws?.send(message));
+        this.reauthListeners.forEach((fn) => fn());
+      })
+      .catch((error) => {
+        this.authorizationInFlight = false;
+        const authError =
+          error instanceof DerivApiError
+            ? error
+            : new DerivApiError("authorize_failed", String(error));
+        this.authorized = false;
+        this.lastAuthorization = null;
+        this.authorizationWaiters.forEach((waiter) => waiter.reject(authError));
+        this.authorizationWaiters.clear();
+        this.authErrorListeners.forEach((fn) => fn(authError));
+      });
   }
 
   connect() {
@@ -86,24 +153,18 @@ class DerivSocket {
     this.ws = ws;
 
     ws.onopen = () => {
-      const firstConnect = this.retries === 0 && !this.hasConnectedOnce;
       this.hasConnectedOnce = true;
       this.retries = 0;
       this.emitStatus("open");
-      // Re-authorize first so queued authenticated calls succeed.
+      this.authorized = false;
+      this.lastAuthorization = null;
+      // Do not flush authenticated calls until Deriv confirms authorization.
       if (this.token) {
-        this.send({ authorize: this.token })
-          .then(() => {
-            if (!firstConnect) this.reauthListeners.forEach((fn) => fn());
-          })
-          .catch((e) => {
-            const err =
-              e instanceof DerivApiError ? e : new DerivApiError("authorize_failed", String(e));
-            this.authErrorListeners.forEach((fn) => fn(err));
-          });
+        this.authorizeCurrentConnection();
+      } else {
+        const queued = this.queue.splice(0);
+        queued.forEach((message) => ws.send(message));
       }
-      const queued = this.queue.splice(0);
-      queued.forEach((msg) => ws.send(msg));
       this.keepAlive = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ ping: 1 }));
       }, 25_000);
@@ -134,6 +195,8 @@ class DerivSocket {
       if (this.keepAlive) clearInterval(this.keepAlive);
       this.keepAlive = null;
       this.ws = null;
+      this.authorized = false;
+      this.authorizationInFlight = false;
       this.emitStatus("closed");
       if (!this.closedByUs) this.scheduleReconnect();
     };
@@ -176,7 +239,13 @@ class DerivSocket {
         timer,
       });
 
-      if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(payload);
+      const isAuthorizeRequest = Object.prototype.hasOwnProperty.call(request, "authorize");
+      if (
+        this.ws?.readyState === WebSocket.OPEN &&
+        (isAuthorizeRequest || !this.token || this.authorized)
+      ) {
+        this.ws.send(payload);
+      }
       else {
         this.queue.push(payload);
         this.connect();
@@ -196,6 +265,12 @@ class DerivSocket {
   disconnect() {
     this.closedByUs = true;
     this.token = null;
+    this.authorized = false;
+    this.authorizationInFlight = false;
+    this.lastAuthorization = null;
+    const disconnected = new DerivApiError("disconnected", "Connection closed.");
+    this.authorizationWaiters.forEach((waiter) => waiter.reject(disconnected));
+    this.authorizationWaiters.clear();
     this.pending.forEach((p) => {
       clearTimeout(p.timer);
       p.reject(new DerivApiError("disconnected", "Connection closed."));

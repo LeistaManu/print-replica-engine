@@ -87,9 +87,7 @@ export interface TransactionRow {
 
 /** Authorize the WebSocket with an OAuth access token (or account token). */
 export async function authorize(token: string): Promise<AuthorizeResult> {
-  derivSocket.setToken(token);
-  derivSocket.connect();
-  const res = await derivSocket.send<{ authorize: AuthorizeResult }>({ authorize: token });
+  const res = await derivSocket.authorize(token) as DerivResponse<{ authorize: AuthorizeResult }>;
   return res.authorize;
 }
 
@@ -110,11 +108,14 @@ export async function getAccounts(token: string): Promise<DerivAccountInfo[]> {
 
 /** Switch the authorized session to another account of the same user. */
 export async function switchAccount(token: string, loginid: string): Promise<AuthorizeResult> {
-  const res = await derivSocket.send<{ authorize: AuthorizeResult }>({
-    authorize: token,
-    loginid,
-  });
-  return res.authorize;
+  // An account token already identifies its login ID. `loginid` is not a
+  // valid field on Deriv's authorize request and causes input validation to
+  // fail, so it is intentionally used only as a caller-side account check.
+  const authorized = await authorize(token);
+  if (authorized.loginid !== loginid) {
+    throw new Error(`Deriv authorized ${authorized.loginid} instead of ${loginid}.`);
+  }
+  return authorized;
 }
 
 export function logout(): Promise<DerivResponse> {

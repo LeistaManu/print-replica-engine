@@ -9,6 +9,7 @@ import {
   logout,
   login,
 } from '@/lib/deriv-auth'
+import { DERIV_SIGNUP_URL, SUPPORT_PHONE } from '@/lib/deriv'
 
 export default function Navbar() {
   const [loggedIn, setLoggedIn] = useState(false)
@@ -49,12 +50,12 @@ export default function Navbar() {
             </Link>
           )}
 
-          <Link
-            to="/support"
+          <a
+            href={`tel:${SUPPORT_PHONE}`}
             className="text-sm text-slate-300 hover:text-white"
           >
             Support
-          </Link>
+          </a>
         </nav>
 
         {/* Auth buttons */}
@@ -75,12 +76,12 @@ export default function Navbar() {
                 Log in
               </button>
 
-              <Link
-                to="/signup"
+              <a
+                href={DERIV_SIGNUP_URL}
                 className="rounded-xl bg-pink-200 px-4 py-2 text-sm font-medium text-black transition hover:bg-pink-100"
               >
                 Sign up
-              </Link>
+              </a>
             </>
           )}
         </div>
