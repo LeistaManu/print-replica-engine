@@ -38,6 +38,7 @@ class DerivSocket {
   private token: string | null = null;
   private authorized = false;
   private authorizationInFlight = false;
+  private lastAuthorization: DerivResponse | null = null;
   private authorizationWaiters = new Set<{
     resolve: (v: DerivResponse) => void;
     reject: (e: Error) => void;
@@ -78,7 +79,10 @@ class DerivSocket {
   }
 
   setToken(token: string | null) {
-    if (this.token !== token) this.authorized = false;
+    if (this.token !== token) {
+      this.authorized = false;
+      this.lastAuthorization = null;
+    }
     this.token = token;
   }
 
@@ -89,8 +93,12 @@ class DerivSocket {
   authorize(token: string): Promise<DerivResponse> {
     this.setToken(token);
 
-    if (this.authorized && this.ws?.readyState === WebSocket.OPEN) {
-      return Promise.resolve({ msg_type: "authorize" });
+    if (
+      this.authorized &&
+      this.lastAuthorization &&
+      this.ws?.readyState === WebSocket.OPEN
+    ) {
+      return Promise.resolve(this.lastAuthorization);
     }
 
     const result = new Promise<DerivResponse>((resolve, reject) => {
@@ -112,6 +120,7 @@ class DerivSocket {
       .then((response) => {
         this.authorizationInFlight = false;
         this.authorized = true;
+        this.lastAuthorization = response;
         this.authorizationWaiters.forEach((waiter) => waiter.resolve(response));
         this.authorizationWaiters.clear();
 
@@ -126,6 +135,7 @@ class DerivSocket {
             ? error
             : new DerivApiError("authorize_failed", String(error));
         this.authorized = false;
+        this.lastAuthorization = null;
         this.authorizationWaiters.forEach((waiter) => waiter.reject(authError));
         this.authorizationWaiters.clear();
         this.authErrorListeners.forEach((fn) => fn(authError));
@@ -147,6 +157,7 @@ class DerivSocket {
       this.retries = 0;
       this.emitStatus("open");
       this.authorized = false;
+      this.lastAuthorization = null;
       // Do not flush authenticated calls until Deriv confirms authorization.
       if (this.token) {
         this.authorizeCurrentConnection();
@@ -256,6 +267,7 @@ class DerivSocket {
     this.token = null;
     this.authorized = false;
     this.authorizationInFlight = false;
+    this.lastAuthorization = null;
     const disconnected = new DerivApiError("disconnected", "Connection closed.");
     this.authorizationWaiters.forEach((waiter) => waiter.reject(disconnected));
     this.authorizationWaiters.clear();
