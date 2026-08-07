@@ -180,7 +180,8 @@ class DerivSocket {
       }
 
       if (data.req_id && this.pending.has(data.req_id)) {
-        const p = this.pending.get(data.req_id)!;
+        const p = this.pending.get(data.req_id);
+        if (!p) return;
         clearTimeout(p.timer);
         this.pending.delete(data.req_id);
         if (data.error) p.reject(new DerivApiError(data.error.code, data.error.message));
