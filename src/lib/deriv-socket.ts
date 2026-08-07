@@ -79,11 +79,12 @@ class DerivSocket {
   }
 
   setToken(token: string | null) {
-    if (this.token !== token) {
+    const normalized = token?.trim() || null;
+    if (this.token !== normalized) {
       this.authorized = false;
       this.lastAuthorization = null;
     }
-    this.token = token;
+    this.token = normalized;
   }
 
   /**
@@ -179,7 +180,8 @@ class DerivSocket {
       }
 
       if (data.req_id && this.pending.has(data.req_id)) {
-        const p = this.pending.get(data.req_id)!;
+        const p = this.pending.get(data.req_id);
+        if (!p) return;
         clearTimeout(p.timer);
         this.pending.delete(data.req_id);
         if (data.error) p.reject(new DerivApiError(data.error.code, data.error.message));
@@ -191,12 +193,30 @@ class DerivSocket {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       if (this.keepAlive) clearInterval(this.keepAlive);
       this.keepAlive = null;
       this.ws = null;
       this.authorized = false;
       this.authorizationInFlight = false;
+
+      // A request that was already written to a socket cannot receive its
+      // response after that socket closes. Reject it now with the real cause
+      // instead of leaving the UI waiting for the generic request timeout.
+      const closedError = new DerivApiError(
+        "socket_closed",
+        event.reason || "The Deriv connection closed before responding.",
+      );
+      this.pending.forEach((request) => {
+        clearTimeout(request.timer);
+        request.reject(closedError);
+      });
+      this.pending.clear();
+
+      if (this.authorizationWaiters.size > 0) {
+        this.authorizationWaiters.forEach((waiter) => waiter.reject(closedError));
+        this.authorizationWaiters.clear();
+      }
       this.emitStatus("closed");
       if (!this.closedByUs) this.scheduleReconnect();
     };
@@ -256,7 +276,8 @@ class DerivSocket {
   /** Subscribe to a stream by msg_type. Returns an unsubscribe function. */
   subscribe(msgType: string, listener: Listener) {
     if (!this.subscribers.has(msgType)) this.subscribers.set(msgType, new Set());
-    this.subscribers.get(msgType)!.add(listener);
+    const listeners = this.subscribers.get(msgType);
+    listeners?.add(listener);
     return () => {
       this.subscribers.get(msgType)?.delete(listener);
     };

@@ -16,12 +16,11 @@ export const DERIV_TOKEN_ENDPOINT = "https://auth.deriv.com/oauth2/token";
 /** Scopes requested for trading + account management + cashier. */
 export const DERIV_SCOPES = ["trade", "account_manage", "application_read", "payment"] as const;
 
-/** Numeric Deriv application id used for the API WebSocket handshake.
- *  The OAuth client id is NOT a valid app_id — ws.derivws.com rejects the
- *  connection (which is what left the UI stuck on "Connecting…").
- *  Override with VITE_DERIV_APP_ID once your own app id is provisioned. */
+/** Numeric Deriv application id used only for the API WebSocket handshake.
+ * OAuth client IDs are intentionally kept separate: ws.derivws.com rejects
+ * both the alphanumeric OAuth client ID and the UUID client identifier. */
 export const DERIV_WS_APP_ID =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_DERIV_APP_ID) || "1089";
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_DERIV_APP_ID) || "62837";
 
 /** Deriv API WebSocket endpoint. */
 export const DERIV_WS_URL = `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_WS_APP_ID}&l=EN&brand=deriv`;
