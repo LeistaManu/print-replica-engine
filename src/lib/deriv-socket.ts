@@ -37,6 +37,7 @@ class DerivSocket {
   private queue: string[] = [];
   private token: string | null = null;
   private authorized = false;
+  private authorizationInFlight = false;
   private authorizationWaiters = new Set<{
     resolve: (v: DerivResponse) => void;
     reject: (e: Error) => void;
@@ -104,10 +105,12 @@ class DerivSocket {
 
   private authorizeCurrentConnection() {
     const token = this.token;
-    if (!token || this.authorized) return;
+    if (!token || this.authorized || this.authorizationInFlight) return;
+    this.authorizationInFlight = true;
 
     this.send({ authorize: token })
       .then((response) => {
+        this.authorizationInFlight = false;
         this.authorized = true;
         this.authorizationWaiters.forEach((waiter) => waiter.resolve(response));
         this.authorizationWaiters.clear();
@@ -117,6 +120,7 @@ class DerivSocket {
         this.reauthListeners.forEach((fn) => fn());
       })
       .catch((error) => {
+        this.authorizationInFlight = false;
         const authError =
           error instanceof DerivApiError
             ? error
@@ -181,6 +185,7 @@ class DerivSocket {
       this.keepAlive = null;
       this.ws = null;
       this.authorized = false;
+      this.authorizationInFlight = false;
       this.emitStatus("closed");
       if (!this.closedByUs) this.scheduleReconnect();
     };
@@ -250,6 +255,7 @@ class DerivSocket {
     this.closedByUs = true;
     this.token = null;
     this.authorized = false;
+    this.authorizationInFlight = false;
     const disconnected = new DerivApiError("disconnected", "Connection closed.");
     this.authorizationWaiters.forEach((waiter) => waiter.reject(disconnected));
     this.authorizationWaiters.clear();

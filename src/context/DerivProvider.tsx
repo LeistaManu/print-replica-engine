@@ -312,12 +312,18 @@ export function DerivProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       try {
-        const accountToken = auth.getTokenFor(loginid) ?? token;
-        const authorized = await api.switchAccount(accountToken, loginid);
+        const accountToken = auth.getTokenFor(loginid);
 
-        setProfile(authorized);
-        setActiveLoginid(authorized.loginid);
-        writeActive(authorized.loginid);
+        // Classic multi-account redirects provide one token per login ID and
+        // can be re-authorized here. A PKCE access token has no separate token
+        // for each account; balance(all) already supplies those balances, so
+        // switching the UI must not send an invalid authorize payload.
+        if (accountToken) {
+          const authorized = await api.switchAccount(accountToken, loginid);
+          setProfile(authorized);
+          setActiveLoginid(authorized.loginid);
+          writeActive(authorized.loginid);
+        }
       } finally {
         try {
           await loadBalances();
