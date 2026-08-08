@@ -16,6 +16,11 @@ export interface DerivAccountInfo {
   landing_company_name?: string;
 }
 
+export interface OAuthAccountInfo extends DerivAccountInfo {
+  balance: number;
+  status?: string;
+}
+
 export interface AuthorizeResult {
   loginid: string;
   email: string;
@@ -84,6 +89,53 @@ export interface TransactionRow {
 }
 
 /* ---------------------------- Auth ---------------------------- */
+
+/** Get all OAuth-linked Options accounts through Deriv's current REST API. */
+export async function getOAuthAccounts(token: string): Promise<OAuthAccountInfo[]> {
+  const response = await fetch("/api/auth/deriv", {
+    headers: { Authorization: `Bearer ${token.trim()}` },
+  });
+  const payload = (await response.json()) as {
+    data?: Array<{
+      account_id: string;
+      balance: number;
+      currency: string;
+      account_type: "demo" | "real";
+      group?: string;
+      status?: string;
+    }>;
+    error?: string;
+    error_description?: string;
+  };
+
+  if (!response.ok || !payload.data) {
+    throw new DerivRestError(
+      response.status,
+      payload.error ?? "oauth_accounts_failed",
+      payload.error_description ?? "Could not load Deriv accounts.",
+    );
+  }
+
+  return payload.data.map((account) => ({
+    loginid: account.account_id,
+    balance: account.balance,
+    currency: account.currency,
+    is_virtual: account.account_type === "demo",
+    account_type: account.account_type,
+    landing_company_name: account.group,
+    status: account.status,
+  }));
+}
+
+export class DerivRestError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 /** Authorize the WebSocket with an OAuth access token (or account token). */
 export async function authorize(token: string): Promise<AuthorizeResult> {

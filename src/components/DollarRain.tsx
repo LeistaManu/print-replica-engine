@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
 
+const bills = Array.from({ length: 24 }, (_, index) => ({
+  left: (index * 37 + 11) % 100,
+  delay: ((index * 17) % 12) / 10,
+  duration: 3 + ((index * 23) % 30) / 10,
+  size: 22 + ((index * 19) % 26),
+}));
+
 export function DollarRain({ duration = 1600 }: { duration?: number }) {
   const [show, setShow] = useState(true);
   useEffect(() => {
@@ -7,24 +14,19 @@ export function DollarRain({ duration = 1600 }: { duration?: number }) {
     return () => clearTimeout(t);
   }, [duration]);
   if (!show) return null;
-  const bills = Array.from({ length: 24 });
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden bg-[#0a0e1a]/70 backdrop-blur-sm">
-      {bills.map((_, i) => {
-        const left = Math.random() * 100;
-        const delay = Math.random() * 1.2;
-        const dur = 3 + Math.random() * 3;
-        const size = 22 + Math.random() * 26;
+      {bills.map((bill, i) => {
         return (
           <span
             key={i}
             className="absolute animate-dollar-fall select-none"
             style={{
-              left: `${left}%`,
+              left: `${bill.left}%`,
               top: "-40px",
-              fontSize: `${size}px`,
-              animationDelay: `${delay}s`,
-              animationDuration: `${dur}s`,
+              fontSize: `${bill.size}px`,
+              animationDelay: `${bill.delay}s`,
+              animationDuration: `${bill.duration}s`,
               filter: "drop-shadow(0 4px 12px rgba(16,185,129,0.5))",
             }}
           >
