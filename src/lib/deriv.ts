@@ -2,7 +2,7 @@
 // Login now goes through the OAuth 2.0 Authorization Code + PKCE flow
 // (src/lib/deriv-auth.ts). No legacy app_id token-redirect logic remains.
 
-import { login as oauthLogin, logout as oauthLogout, isLoggedIn } from "./deriv-auth";
+import { login as oauthLogin, signup as oauthSignup, logout as oauthLogout, isLoggedIn } from "./deriv-auth";
 import { deposit as apiDeposit, withdraw as apiWithdraw } from "./deriv-api";
 
 export {
@@ -27,7 +27,7 @@ export function handleLogin(e?: { preventDefault?: () => void }) {
 
 export function handleSignup(e?: { preventDefault?: () => void }) {
   e?.preventDefault?.();
-  if (typeof window !== "undefined") window.location.assign(DERIV_SIGNUP_URL);
+  void oauthSignup("/app/dashboard");
 }
 
 export function handleLogout(e?: { preventDefault?: () => void }) {

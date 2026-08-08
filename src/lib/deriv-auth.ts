@@ -201,7 +201,7 @@ export function resolveRedirectUri(): string {
   return `${origin}${DERIV_REDIRECT_PATH}`
 }
 
-export async function login(returnTo?: string): Promise<void> {
+async function startOAuth(returnTo?: string, registration = false): Promise<void> {
   if (typeof window === 'undefined') return
 
   const verifier = randomString()
@@ -228,9 +228,23 @@ export async function login(returnTo?: string): Promise<void> {
     code_challenge_method: 'S256',
   })
 
+  if (registration) {
+    params.set('prompt', 'registration')
+    params.set('utm_medium', 'affiliate')
+    params.set('utm_source', '26457')
+  }
+
   window.location.assign(
     `${DERIV_AUTHORIZE_ENDPOINT}?${params.toString()}`
   )
+}
+
+export async function login(returnTo?: string): Promise<void> {
+  return startOAuth(returnTo, false)
+}
+
+export async function signup(returnTo?: string): Promise<void> {
+  return startOAuth(returnTo, true)
 }
 
 export function consumeReturnTo(): string | null {
