@@ -5,6 +5,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DERIV_CLIENT_ID, DERIV_TOKEN_ENDPOINT } from "@/lib/deriv-config";
 
+const DERIV_API_ORIGIN = "https://api.derivws.com";
+
 interface ExchangeBody {
   code?: string;
   code_verifier?: string;
@@ -58,6 +60,35 @@ async function requestToken(form: URLSearchParams) {
 export const Route = createFileRoute("/api/auth/deriv")({
   server: {
     handlers: {
+      GET: async ({ request }) => {
+        const authorization = request.headers.get("authorization");
+        if (!authorization?.startsWith("Bearer ")) {
+          return json({ error: "unauthorized", error_description: "A Deriv access token is required." }, 401);
+        }
+
+        try {
+          const response = await fetch(`${DERIV_API_ORIGIN}/trading/v1/options/accounts`, {
+            headers: {
+              Authorization: authorization,
+              "Deriv-App-ID": DERIV_CLIENT_ID,
+              Accept: "application/json",
+            },
+          });
+          const text = await response.text();
+          return new Response(text, {
+            status: response.status,
+            headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+          });
+        } catch (error) {
+          return json(
+            {
+              error: "network_error",
+              error_description: error instanceof Error ? error.message : "Could not reach the Deriv API.",
+            },
+            502,
+          );
+        }
+      },
       POST: async ({ request }) => {
         let body: ExchangeBody;
         try {

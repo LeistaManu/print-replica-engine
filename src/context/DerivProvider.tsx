@@ -88,6 +88,7 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   const virtualMapRef = useRef<Map<string, boolean>>(new Map());
   const tokenRef = useRef<string | null>(null);
+  const oauthSessionRef = useRef(false);
 
   // Restore session on mount. An expired access token may still contain a
   // usable refresh token, so complete that check before ending hydration.
@@ -162,6 +163,17 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadBalances = useCallback(async () => {
+    if (oauthSessionRef.current && tokenRef.current) {
+      const oauthAccounts = await api.getOAuthAccounts(tokenRef.current);
+      oauthAccounts.forEach((account) => {
+        applyBalanceSnapshot({
+          loginid: account.loginid,
+          currency: account.currency,
+          balance: account.balance,
+        });
+      });
+      return;
+    }
     try {
       const snapshot = await api.getBalance("all");
       applyBalanceSnapshot(snapshot);
@@ -191,6 +203,67 @@ export function DerivProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       try {
+        // OAuth2 bearer tokens use Deriv's current REST account endpoint.
+        // They are not valid input for the legacy WebSocket `authorize`
+        // message, which was the source of the validation error in the UI.
+        try {
+          const oauthAccounts = await api.getOAuthAccounts(token);
+          if (cancelled) return;
+          if (oauthAccounts.length === 0) throw new Error("No Deriv trading accounts were returned.");
+
+          oauthSessionRef.current = true;
+          const list: DerivAccountInfo[] = oauthAccounts.map((account) => ({
+            loginid: account.loginid,
+            currency: account.currency,
+            is_virtual: account.is_virtual,
+            account_type: account.account_type,
+            landing_company_name: account.landing_company_name,
+          }));
+          virtualMapRef.current = new Map(list.map((account) => [account.loginid, account.is_virtual]));
+          setAccounts(list);
+          oauthAccounts.forEach((account) => {
+            applyBalanceSnapshot({
+              loginid: account.loginid,
+              currency: account.currency,
+              balance: account.balance,
+            });
+          });
+
+          const stored = readActive();
+          const preferredAccount =
+            (stored && oauthAccounts.find((account) => account.loginid === stored)) ||
+            oauthAccounts.find((account) => !account.is_virtual) ||
+            oauthAccounts[0];
+          if (!preferredAccount) throw new Error("No active Deriv account is available.");
+
+          setActiveLoginid(preferredAccount.loginid);
+          writeActive(preferredAccount.loginid);
+          setProfile({
+            loginid: preferredAccount.loginid,
+            email: "",
+            fullname: "",
+            country: "",
+            currency: preferredAccount.currency,
+            is_virtual: preferredAccount.is_virtual ? 1 : 0,
+            balance: preferredAccount.balance,
+            landing_company_name: preferredAccount.landing_company_name,
+            account_list: list.map((account) => ({
+              loginid: account.loginid,
+              currency: account.currency,
+              is_virtual: account.is_virtual ? 1 : 0,
+              account_type: account.account_type,
+              landing_company_name: account.landing_company_name,
+            })),
+          });
+          setError(null);
+          return;
+        } catch (oauthError) {
+          // A classic token redirect is supported as a compatibility path.
+          // Only fall through when classic account tokens actually exist.
+          if (Object.keys(auth.getAccountTokens()).length === 0) throw oauthError;
+          oauthSessionRef.current = false;
+        }
+
         const authorized = await api.authorize(token);
         if (cancelled) return;
 
@@ -370,6 +443,25 @@ export function DerivProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       try {
+        if (oauthSessionRef.current) {
+          const account = accounts.find((item) => item.loginid === loginid);
+          const accountBalance = balances[loginid];
+          if (account) {
+            setProfile((current) => ({
+              loginid,
+              email: current?.email ?? "",
+              fullname: current?.fullname ?? "",
+              country: current?.country ?? "",
+              currency: accountBalance?.currency ?? account.currency,
+              is_virtual: account.is_virtual ? 1 : 0,
+              balance: accountBalance?.balance ?? 0,
+              landing_company_name: account.landing_company_name,
+              account_list: current?.account_list,
+            }));
+          }
+          await loadBalances();
+          return;
+        }
         const accountToken = auth.getTokenFor(loginid);
 
         // Classic multi-account redirects provide one token per login ID and
@@ -389,7 +481,7 @@ export function DerivProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [token, loadBalances],
+    [token, loadBalances, accounts, balances],
   );
 
   const doDeposit = useCallback(async () => {
