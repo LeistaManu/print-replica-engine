@@ -1,12 +1,32 @@
-// Typed Deriv API service built on the shared WebSocket connection.
-// Every function here is a thin, strongly-typed wrapper around a Deriv API call.
+// src/lib/deriv-api.ts
+//
+// Current Deriv Options API service.
+//
+// IMPORTANT:
+// - Uses OAuth 2.0 access tokens.
+// - Uses the current REST Options API for account/balance information.
+// - Does NOT use legacy token1/acct1 redirect tokens.
+// - Does NOT use legacy balance { account: "all" }.
+// - Demo balance reset uses the official Deriv endpoint.
+// - WebSocket trading can be added separately through the current OTP flow.
 
-import { derivSocket, type DerivResponse } from "./deriv-socket";
-import { DERIV_DEPOSIT_URL, DERIV_WITHDRAW_URL } from "./deriv-config";
+import {
+  DERIV_DEPOSIT_URL,
+  DERIV_WITHDRAW_URL,
+  DERIV_WS_APP_ID,
+} from "./deriv-config";
 
 export * from "./deriv-config";
 
-/* ---------------------------- Types ---------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Constants                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const DERIV_API_BASE = "https://api.derivws.com";
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
 
 export interface DerivAccountInfo {
   loginid: string;
@@ -14,11 +34,18 @@ export interface DerivAccountInfo {
   is_virtual: boolean;
   account_type?: string;
   landing_company_name?: string;
+  balance?: number;
+  status?: string;
+  group?: string;
 }
 
-export interface OAuthAccountInfo extends DerivAccountInfo {
+export interface OptionsAccount {
+  account_id: string;
   balance: number;
+  currency: string;
+  group?: string;
   status?: string;
+  account_type: string;
 }
 
 export interface AuthorizeResult {
@@ -36,6 +63,7 @@ export interface AuthorizeResult {
     is_virtual: 0 | 1;
     account_type?: string;
     landing_company_name?: string;
+    balance?: number;
   }>;
 }
 
@@ -43,8 +71,8 @@ export interface BalanceInfo {
   loginid: string;
   currency: string;
   balance: number;
-  total?: Record<string, { amount: number; currency: string }>;
-  accounts?: Record<string, { balance: number; currency: string; type?: string; demo_account?: 0 | 1 }>;
+  is_virtual?: boolean;
+  account_type?: string;
 }
 
 export interface PortfolioContract {
@@ -88,201 +116,442 @@ export interface TransactionRow {
   payout?: number;
 }
 
-/* ---------------------------- Auth ---------------------------- */
+interface ApiErrorPayload {
+  errors?: Array<{
+    status?: number;
+    code?: string;
+    message?: string;
+  }>;
+  error?: string;
+  error_description?: string;
+  message?: string;
+}
 
-/** Get all OAuth-linked Options accounts through Deriv's current REST API. */
-export async function getOAuthAccounts(token: string): Promise<OAuthAccountInfo[]> {
-  const response = await fetch("/api/auth/deriv", {
-    headers: { Authorization: `Bearer ${token.trim()}` },
-  });
-  const payload = (await response.json()) as {
-    data?: Array<{
-      account_id: string;
-      balance: number;
-      currency: string;
-      account_type: "demo" | "real";
-      group?: string;
-      status?: string;
-    }>;
-    error?: string;
-    error_description?: string;
-  };
+/* -------------------------------------------------------------------------- */
+/* Errors                                                                     */
+/* -------------------------------------------------------------------------- */
 
-  if (!response.ok || !payload.data) {
-    throw new DerivRestError(
-      response.status,
-      payload.error ?? "oauth_accounts_failed",
-      payload.error_description ?? "Could not load Deriv accounts.",
+export class DerivApiError extends Error {
+  code: string;
+  status?: number;
+
+  constructor(code: string, message: string, status?: number) {
+    super(message);
+    this.name = "DerivApiError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function requireBrowser() {
+  if (typeof window === "undefined") {
+    throw new DerivApiError(
+      "server_environment",
+      "This Deriv API operation must run in the browser.",
+    );
+  }
+}
+
+function requireToken(token: string | null | undefined): string {
+  if (!token) {
+    throw new DerivApiError(
+      "missing_token",
+      "Your Deriv session is not authenticated.",
     );
   }
 
-  return payload.data.map((account) => ({
-    loginid: account.account_id,
-    balance: account.balance,
-    currency: account.currency,
-    is_virtual: account.account_type === "demo",
-    account_type: account.account_type,
-    landing_company_name: account.group,
-    status: account.status,
-  }));
+  return token;
 }
 
-export class DerivRestError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
+function buildHeaders(token: string): HeadersInit {
+  return {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    "Deriv-App-ID": String(DERIV_WS_APP_ID),
+  };
+}
+
+async function parseJsonSafe(response: Response): Promise<unknown> {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
   }
 }
 
-/** Authorize the WebSocket with an OAuth access token (or account token). */
-export async function authorize(token: string): Promise<AuthorizeResult> {
-  const res = await derivSocket.authorize(token) as DerivResponse<{ authorize: AuthorizeResult }>;
-  return res.authorize;
+function getApiError(
+  payload: unknown,
+  response: Response,
+): DerivApiError {
+  const data = payload as ApiErrorPayload | null | undefined;
+
+  const first = data?.errors?.[0];
+
+  const code =
+    first?.code ||
+    data?.error ||
+    `HTTP_${response.status}`;
+
+  const message =
+    first?.message ||
+    data?.error_description ||
+    data?.message ||
+    response.statusText ||
+    "Deriv API request failed.";
+
+  return new DerivApiError(code, message, response.status);
 }
 
-/** List the accounts available to the authorized session. */
-export async function getAccounts(token: string): Promise<DerivAccountInfo[]> {
-  const auth = await authorize(token);
-  const list = auth.account_list ?? [
-    { loginid: auth.loginid, currency: auth.currency, is_virtual: auth.is_virtual },
-  ];
-  return list.map((a) => ({
-    loginid: a.loginid,
-    currency: a.currency || auth.currency,
-    is_virtual: !!a.is_virtual,
-    account_type: a.account_type,
-    landing_company_name: a.landing_company_name,
-  }));
-}
+async function request<T>(
+  path: string,
+  token: string,
+  init: RequestInit = {},
+): Promise<T> {
+  requireBrowser();
 
-/** Switch the authorized session to another account of the same user. */
-export async function switchAccount(token: string, loginid: string): Promise<AuthorizeResult> {
-  // An account token already identifies its login ID. `loginid` is not a
-  // valid field on Deriv's authorize request and causes input validation to
-  // fail, so it is intentionally used only as a caller-side account check.
-  const authorized = await authorize(token);
-  if (authorized.loginid !== loginid) {
-    throw new Error(`Deriv authorized ${authorized.loginid} instead of ${loginid}.`);
+  const accessToken = requireToken(token);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${DERIV_API_BASE}${path}`, {
+      ...init,
+      headers: {
+        ...buildHeaders(accessToken),
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    throw new DerivApiError(
+      "network_error",
+      error instanceof Error
+        ? error.message
+        : "Unable to reach the Deriv API.",
+    );
   }
-  return authorized;
+
+  const payload = await parseJsonSafe(response);
+
+  if (!response.ok) {
+    throw getApiError(payload, response);
+  }
+
+  return payload as T;
 }
 
-export function logout(): Promise<DerivResponse> {
-  const p = derivSocket.send({ logout: 1 }).catch(() => ({}) as DerivResponse);
-  derivSocket.disconnect();
-  return p;
+/* -------------------------------------------------------------------------- */
+/* Options Accounts                                                           */
+/* -------------------------------------------------------------------------- */
+
+interface AccountsResponse {
+  data?:
+    | OptionsAccount[]
+    | OptionsAccount
+    | {
+        accounts?: OptionsAccount[];
+      };
+  accounts?: OptionsAccount[];
 }
 
-/* ---------------------------- Balance ---------------------------- */
-
-/** One-shot balance read for all accounts. */
-export async function getBalance(account: "current" | "all" = "all"): Promise<BalanceInfo> {
-  const res = await derivSocket.send<{ balance: BalanceInfo }>({ balance: 1, account });
-  return res.balance;
-}
-
-/** Live balance subscription across every account. Returns unsubscribe. */
-export function subscribeBalance(onUpdate: (b: BalanceInfo) => void): () => void {
-  const off = derivSocket.subscribe("balance", (data) => {
-    const balance = (data as DerivResponse<{ balance?: BalanceInfo }>).balance;
-    if (balance) onUpdate(balance);
-  });
-  void derivSocket.send({ balance: 1, account: "all", subscribe: 1 }).catch(() => undefined);
-  return off;
-}
-
-/* ---------------------------- Portfolio ---------------------------- */
-
-export async function getPortfolio(): Promise<PortfolioContract[]> {
-  const res = await derivSocket.send<{ portfolio: { contracts: PortfolioContract[] } }>({
-    portfolio: 1,
-  });
-  return res.portfolio?.contracts ?? [];
-}
-
-/** Open positions enriched with indicative profit where available. */
-export async function getOpenTrades(): Promise<OpenTrade[]> {
-  const contracts = await getPortfolio();
-  const enriched = await Promise.all(
-    contracts.map(async (c) => {
-      try {
-        const res = await derivSocket.send<{
-          proposal_open_contract: { profit?: number; current_spot?: number; bid_price?: number };
-        }>({ proposal_open_contract: 1, contract_id: c.contract_id });
-        const poc = res.proposal_open_contract;
-        return { ...c, profit: poc?.profit, current_spot: poc?.current_spot, indicative_price: poc?.bid_price };
-      } catch {
-        return { ...c };
-      }
-    }),
+/**
+ * Get all current Options accounts belonging to the OAuth session.
+ *
+ * This is the current replacement for the legacy multi-account balance call.
+ */
+export async function getOptionsAccounts(
+  token: string,
+): Promise<OptionsAccount[]> {
+  const response = await request<AccountsResponse>(
+    "/trading/v1/options/accounts",
+    token,
+    {
+      method: "GET",
+    },
   );
-  return enriched;
+
+  const raw = response?.data;
+
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+
+  if (raw && typeof raw === "object") {
+    if (Array.isArray(raw.accounts)) {
+      return raw.accounts;
+    }
+
+    if ("account_id" in raw) {
+      return [raw as OptionsAccount];
+    }
+  }
+
+  if (Array.isArray(response?.accounts)) {
+    return response.accounts;
+  }
+
+  return [];
 }
 
-export async function getClosedTrades(limit = 50): Promise<ClosedTrade[]> {
-  const res = await derivSocket.send<{ profit_table: { transactions: ClosedTrade[] } }>({
-    profit_table: 1,
-    description: 1,
-    limit,
-    sort: "DESC",
+/**
+ * Convert current Options accounts into the account shape
+ * already used by the application.
+ */
+export async function getAccounts(
+  token: string,
+): Promise<DerivAccountInfo[]> {
+  const accounts = await getOptionsAccounts(token);
+
+  return accounts.map((account) => {
+    const isDemo =
+      account.account_type.toLowerCase() === "demo" ||
+      account.account_id.toUpperCase().startsWith("DOT");
+
+    return {
+      loginid: account.account_id,
+      currency: account.currency || "USD",
+      is_virtual: isDemo,
+      account_type: account.account_type,
+      balance: Number(account.balance ?? 0),
+      status: account.status,
+      group: account.group,
+    };
   });
-  return res.profit_table?.transactions ?? [];
 }
 
-export async function getTransactions(limit = 100): Promise<TransactionRow[]> {
-  const res = await derivSocket.send<{ statement: { transactions: TransactionRow[] } }>({
-    statement: 1,
-    description: 1,
-    limit,
-  });
-  return res.statement?.transactions ?? [];
+/**
+ * Return all current account balances.
+ */
+export async function getAllBalances(
+  token: string,
+): Promise<BalanceInfo[]> {
+  const accounts = await getAccounts(token);
+
+  return accounts.map((account) => ({
+    loginid: account.loginid,
+    currency: account.currency,
+    balance: Number.isFinite(account.balance)
+      ? Number(account.balance)
+      : 0,
+    is_virtual: account.is_virtual,
+    account_type: account.account_type,
+  }));
 }
 
-/* ---------------------------- Cashier ---------------------------- */
+/**
+ * Get one account balance.
+ *
+ * This intentionally uses the current Options REST API rather than
+ * the removed legacy `account: "all"` parameter.
+ */
+export async function getBalance(
+  token: string,
+  loginid?: string,
+): Promise<BalanceInfo> {
+  const balances = await getAllBalances(token);
+
+  const account = loginid
+    ? balances.find((item) => item.loginid === loginid)
+    : balances[0];
+
+  if (!account) {
+    throw new DerivApiError(
+      "account_not_found",
+      loginid
+        ? `Account ${loginid} was not returned by Deriv.`
+        : "No Deriv Options account was returned.",
+    );
+  }
+
+  return account;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Demo Balance                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Reset an Options demo account to Deriv's default demo balance.
+ *
+ * Deriv currently resets eligible Options demo accounts to $10,000 USD.
+ */
+export async function resetDemoBalance(
+  token: string,
+  accountId: string,
+): Promise<void> {
+  if (!accountId) {
+    throw new DerivApiError(
+      "missing_account",
+      "No demo account was selected.",
+    );
+  }
+
+  const isDemo = accountId.toUpperCase().startsWith("DOT");
+
+  if (!isDemo) {
+    throw new DerivApiError(
+      "not_demo_account",
+      "The selected account is not a demo account.",
+    );
+  }
+
+  await request<unknown>(
+    `/trading/v1/options/accounts/${encodeURIComponent(
+      accountId,
+    )}/reset-demo-balance`,
+    token,
+    {
+      method: "POST",
+    },
+  );
+}
+
+/**
+ * Convenience helper:
+ * reset the first available demo account.
+ */
+export async function resetFirstDemoBalance(
+  token: string,
+): Promise<BalanceInfo> {
+  const accounts = await getAccounts(token);
+
+  const demo = accounts.find((account) => account.is_virtual);
+
+  if (!demo) {
+    throw new DerivApiError(
+      "demo_account_not_found",
+      "No demo Options account was found.",
+    );
+  }
+
+  await resetDemoBalance(token, demo.loginid);
+
+  // Fetch the updated value from Deriv.
+  return getBalance(token, demo.loginid);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Current Account                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Builds the profile shape expected by the existing application.
+ *
+ * The current Options account endpoint does not provide the old
+ * authorize response fields such as email/fullname/country.
+ */
+export function accountToAuthorizeResult(
+  account: DerivAccountInfo,
+): AuthorizeResult {
+  return {
+    loginid: account.loginid,
+    email: "",
+    fullname: "",
+    country: "",
+    currency: account.currency,
+    is_virtual: account.is_virtual ? 1 : 0,
+    balance: account.balance ?? 0,
+    account_list: [
+      {
+        loginid: account.loginid,
+        currency: account.currency,
+        is_virtual: account.is_virtual ? 1 : 0,
+        account_type: account.account_type,
+        balance: account.balance,
+      },
+    ],
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Current WebSocket URL                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Get the authenticated WebSocket URL for an account.
+ *
+ * The current Deriv API uses an OTP endpoint instead of sending the
+ * OAuth token directly through the old WebSocket authorize flow.
+ */
+export async function getAccountWebSocketUrl(
+  token: string,
+  accountId: string,
+): Promise<string> {
+  interface OtpResponse {
+    data?: {
+      url?: string;
+    };
+  }
+
+  const response = await request<OtpResponse>(
+    `/trading/v1/options/accounts/${encodeURIComponent(accountId)}/otp`,
+    token,
+    {
+      method: "POST",
+    },
+  );
+
+  const url = response?.data?.url;
+
+  if (!url) {
+    throw new DerivApiError(
+      "otp_url_missing",
+      "Deriv did not return an authenticated WebSocket URL.",
+    );
+  }
+
+  return url;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cashier                                                                    */
+/* -------------------------------------------------------------------------- */
 
 function openExternal(url: string) {
   if (typeof window === "undefined") return;
-  window.open(url, "_blank", "noopener,noreferrer");
+
+  window.open(
+    url,
+    "_blank",
+    "noopener,noreferrer",
+  );
 }
 
-/** Request the official Deriv deposit flow (cashier URL when permitted). */
 export async function deposit(): Promise<string> {
-  try {
-    const res = await derivSocket.send<{ cashier: string | { deposit?: { address?: string } } }>({
-      cashier: "deposit",
-      provider: "doughflow",
-    });
-    const url = typeof res.cashier === "string" ? res.cashier : undefined;
-    openExternal(url || DERIV_DEPOSIT_URL);
-    return url || DERIV_DEPOSIT_URL;
-  } catch {
-    openExternal(DERIV_DEPOSIT_URL);
-    return DERIV_DEPOSIT_URL;
-  }
+  openExternal(DERIV_DEPOSIT_URL);
+  return DERIV_DEPOSIT_URL;
 }
 
-/** Request the official Deriv withdrawal flow. */
 export async function withdraw(): Promise<string> {
-  try {
-    const res = await derivSocket.send<{ cashier: string }>({
-      cashier: "withdraw",
-      provider: "doughflow",
-    });
-    const url = typeof res.cashier === "string" ? res.cashier : undefined;
-    openExternal(url || DERIV_WITHDRAW_URL);
-    return url || DERIV_WITHDRAW_URL;
-  } catch {
-    openExternal(DERIV_WITHDRAW_URL);
-    return DERIV_WITHDRAW_URL;
-  }
+  openExternal(DERIV_WITHDRAW_URL);
+  return DERIV_WITHDRAW_URL;
 }
 
-/* ---------------------------- Formatting ---------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Compatibility helpers                                                      */
+/* -------------------------------------------------------------------------- */
 
-export function formatMoney(amount: number | undefined, currency = "USD"): string {
-  const value = Number.isFinite(amount) ? (amount as number) : 0;
-  return `${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+export function formatMoney(
+  amount: number | undefined,
+  currency = "USD",
+): string {
+  const value =
+    typeof amount === "number" && Number.isFinite(amount)
+      ? amount
+      : 0;
+
+  return `${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${currency}`;
 }
