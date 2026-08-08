@@ -324,6 +324,10 @@ export async function exchangeCode(
   }
 
   setSession(session)
+  // A successful PKCE session supersedes any legacy token-redirect data.
+  // Keeping those tokens could make a failed REST request incorrectly fall
+  // back to the retired WebSocket authorization flow.
+  localStorage.removeItem(TOKENS_KEY)
   return session
 }
 

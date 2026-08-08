@@ -13,8 +13,8 @@ export const DERIV_REDIRECT_URI = `${SITE_ORIGIN}${DERIV_REDIRECT_PATH}`;
 export const DERIV_AUTHORIZE_ENDPOINT = "https://auth.deriv.com/oauth2/auth";
 export const DERIV_TOKEN_ENDPOINT = "https://auth.deriv.com/oauth2/token";
 
-/** Scopes requested for trading + account management + cashier. */
-export const DERIV_SCOPES = ["trade", "account_manage", "application_read", "payment"] as const;
+/** Current OAuth2 scope required for linked Options accounts and trading. */
+export const DERIV_SCOPES = ["trade"] as const;
 
 /** Numeric Deriv application id used only for the API WebSocket handshake.
  * OAuth client IDs are intentionally kept separate: ws.derivws.com rejects
