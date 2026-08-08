@@ -162,8 +162,13 @@ export function DerivProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadBalances = useCallback(async () => {
-    const snapshot = await api.getBalance("all");
-    applyBalanceSnapshot(snapshot);
+    try {
+      const snapshot = await api.getBalance("all");
+      applyBalanceSnapshot(snapshot);
+    } catch {
+      const snapshot = await api.getBalance("current");
+      applyBalanceSnapshot(snapshot);
+    }
   }, [applyBalanceSnapshot]);
 
   // Authorize + subscribe
@@ -191,7 +196,16 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
         setProfile(authorized);
 
-        const list: DerivAccountInfo[] = (authorized.account_list ?? [
+        // `authorize` already includes the current account balance. Render it
+        // immediately instead of leaving the UI blank while a second request
+        // (which may not support account="all" for every token type) runs.
+        applyBalanceSnapshot({
+          loginid: authorized.loginid,
+          currency: authorized.currency,
+          balance: authorized.balance,
+        });
+
+        let list: DerivAccountInfo[] = (authorized.account_list ?? [
           {
             loginid: authorized.loginid,
             currency: authorized.currency,
@@ -205,6 +219,38 @@ export function DerivProvider({ children }: { children: ReactNode }) {
           landing_company_name: a.landing_company_name,
         }));
 
+        // Classic Deriv redirects return a separate token for every real/demo
+        // account. Authorize each account token once so both balances are
+        // available, then restore the preferred account below.
+        const accountTokens = auth.getAccountTokens();
+        const tokenEntries = Object.entries(accountTokens);
+        if (tokenEntries.length > 0) {
+          const discovered: DerivAccountInfo[] = [];
+          for (const [expectedLoginid, accountToken] of tokenEntries) {
+            try {
+              const account = await api.authorize(accountToken);
+              if (cancelled) return;
+              const loginid = account.loginid || expectedLoginid;
+              discovered.push({
+                loginid,
+                currency: account.currency,
+                is_virtual: account.is_virtual === 1 || loginid.startsWith("VR"),
+                account_type: account.account_list?.find((item) => item.loginid === loginid)?.account_type,
+                landing_company_name: account.landing_company_name,
+              });
+              applyBalanceSnapshot({
+                loginid,
+                currency: account.currency,
+                balance: account.balance,
+              });
+            } catch {
+              // Keep the primary authorization usable when an individual
+              // linked account is unavailable.
+            }
+          }
+          if (discovered.length > 0) list = discovered;
+        }
+
         setAccounts(list);
         virtualMapRef.current = new Map(list.map((a) => [a.loginid, a.is_virtual]));
 
@@ -217,8 +263,20 @@ export function DerivProvider({ children }: { children: ReactNode }) {
         setActiveLoginid(preferred);
         writeActive(preferred);
 
+        const preferredToken = accountTokens[preferred];
+        if (preferredToken) {
+          const preferredAccount = await api.authorize(preferredToken);
+          if (cancelled) return;
+          setProfile(preferredAccount);
+          applyBalanceSnapshot({
+            loginid: preferredAccount.loginid,
+            currency: preferredAccount.currency,
+            balance: preferredAccount.balance,
+          });
+        }
+
         unsubscribeBalance = api.subscribeBalance(applyBalanceSnapshot);
-        await loadBalances();
+        await loadBalances().catch(() => undefined);
 
         if (!cancelled) setError(null);
       } catch (e) {
@@ -370,11 +428,9 @@ export function DerivProvider({ children }: { children: ReactNode }) {
     [balances],
   );
 
-  // Source of truth = persisted session OR current token
-  const session = auth.getSession();
-
-  const isAuthenticated =
-    !!session?.access_token || !!token;
+  // A stored token is only a login candidate. The UI becomes authenticated
+  // after Deriv has actually accepted it and returned an account profile.
+  const isAuthenticated = profile !== null;
 
   const status: DerivStatus = !isAuthenticated
     ? "signed-out"
@@ -386,7 +442,7 @@ export function DerivProvider({ children }: { children: ReactNode }) {
 
   const value: DerivContextValue = {
     isAuthenticated,
-    isInitializing: !hydrated,
+    isInitializing: !hydrated || (!!token && loading && !profile),
     isLoggedIn: isAuthenticated,
     status,
     isLoading: loading,
